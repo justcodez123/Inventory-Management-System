@@ -1,0 +1,38 @@
+The Architecture: Electron + Spring Boot Sidecar
+
+    The UI (Electron Renderer): Your frontend is built with React, exactly as if it were a web app. It handles all the views, forms, and state management.
+
+    The Orchestrator (Electron Main Process): When the user double-clicks the application icon, Electron's Node.js brain starts up. Its first job is to silently launch your Spring Boot application in the background as a child process (using Node's child_process.spawn('java', ['-jar', 'backend.jar'])).
+
+    The Engine (Spring Boot): The Java backend spins up locally (e.g., on localhost:8080).
+
+    The Bridge: Your React frontend makes standard HTTP REST or GraphQL calls to that local Spring Boot server to fetch inventory, save bills, or calculate totals.
+
+How This Meets Your Changed Plans
+1. Supports All Desktop OS
+
+This stack is inherently cross-platform.
+
+    The Java layer runs anywhere a Java Virtual Machine (JVM) exists.
+
+    The Electron layer packages everything nicely into standard executable formats. You can build a .exe for Windows, a .dmg for macOS, and an .AppImage or .deb file which will run flawlessly on your bare-metal Ubuntu setup.
+
+2. Offline and Online Capabilities
+
+This is where Spring Boot truly shines as a local backend.
+
+    Offline Mode (Default): Spring Boot connects to an embedded, local SQLite database file stored in the user's application data folder. All daily operations—generating invoices, searching products, reducing inventory—happen instantly on the local machine with zero internet required.
+
+    Online Mode (Syncing): You can build a background service in Spring Boot (@Scheduled) that periodically checks for internet connectivity. When online, it can authenticate and push the locally saved SQLite data to a master cloud database (like AWS PostgreSQL) or sync new product catalogs down to the local machine.
+
+The Engineering Reality Check (Gotchas)
+
+While incredibly powerful, combining Electron and Spring Boot comes with a few specific engineering challenges you need to plan for:
+
+    Massive App Size (The Heavyweight Stack): You are bundling Chromium (the browser engine), Node.js, and a Java Runtime Environment (JRE). If you aren't careful, a simple "Hello World" app could be 300MB+.
+
+    Bundling the JRE: You cannot assume the user has Java installed on their computer. You must bundle a custom, stripped-down JRE directly inside your Electron installer so the app is completely self-contained.
+
+    Dynamic Ports: You cannot hardcode Spring Boot to run on port 8080, because another app on the user's computer might be using it, causing a crash. Electron must find a random open port, pass that port to Spring Boot on startup, and tell React where to send API requests.
+
+    Orphaned Processes: You have to write strict exit handlers in Node.js. If the user clicks the "X" to close the Electron window, Electron must explicitly kill the Java child process, otherwise, Spring Boot will remain running invisibly in the computer's background memory.

@@ -1,0 +1,16 @@
+frontend-app/
+├── package.json          # Your dependencies and build scripts
+├── electron.vite.config.ts # Vite bundler configuration
+└── src/
+    ├── main/             # 🧠 THE BRAIN (Node.js)
+    │   └── index.ts      # Opens the window, manages OS tasks, starts Spring Boot later
+    │
+    ├── preload/          # 🌉 THE BRIDGE (Security Layer)
+    │   └── index.ts      # Creates the IPC channels so React can talk to Node safely
+    │
+    └── renderer/         # 🎨 THE UI (React)
+        ├── index.html    # The single HTML file
+        └── src/
+            ├── App.tsx   # Your main React component
+            ├── assets/   # Your logo, fonts, and CSS
+            └── components/ # 👈 Where we will build your wireframes!
