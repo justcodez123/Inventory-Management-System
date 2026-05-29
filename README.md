@@ -7,6 +7,8 @@ An offline-first desktop application built with React and Electron for seamless,
 *   **Dynamic Billing Dashboard**: Real-time total calculation with editable product entries, quantities, and rates.
 *   **Native PDF Export**: Directly generates and saves 1-page PDF invoices to the local file system using Electron IPC.
 *   **Modern UI**: Built with React and Tailwind CSS for a highly responsive, clean, and intuitive user experience.
+*   **Automated CI/CD Pipeline**: Uses GitHub Actions to automatically compile and publish the Windows `.exe` installer on every new release.
+*   **Seamless Auto-Updating**: Integrated `electron-updater` silently downloads the latest releases in the background and upgrades users without manual intervention.
 
 ### 🗺️ Roadmap & Future Scope
 *   **Retailer Dashboard**: A dedicated administrative view to browse historical transaction records.
