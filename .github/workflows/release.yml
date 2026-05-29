@@ -10,6 +10,9 @@ jobs:
     # Run on a Windows machine to properly build the .exe installer
     runs-on: windows-latest
     
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     # Grant permissions for the GITHUB_TOKEN to create releases
     permissions:
       contents: write
@@ -21,7 +24,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Dependencies
         working-directory: ./frontend

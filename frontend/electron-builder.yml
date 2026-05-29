@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: frontend
+appId: com.inventory.management
+productName: "Inventory Management System"
 directories:
   buildResources: build
 files:
