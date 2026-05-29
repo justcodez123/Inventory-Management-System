@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Entries, { EntryRow } from '../components/Entries';
 import Billing from '../components/Billing';
+//import { Navbar, NavOption } from '../components/Navbar';
 /**
  * Interface for Customer Details state.
  */
@@ -10,7 +11,7 @@ interface CustomerDetails {
   date: string;
 }
 
-const Dashboard: React.FC = () => {
+const ConsumerBilling: React.FC = () => {
   // State for Customer Details
   const [customer, setCustomer] = useState<CustomerDetails>({
     name: '',
@@ -21,6 +22,28 @@ const Dashboard: React.FC = () => {
 
   // State for Product Entries
   const [entries, setEntries] = useState<EntryRow[]>([]);
+
+  const DEFAULT_PRODUCTS = ['Tshirt', 'Jeans', 'Sando', 'Trousers', 'Shirt', 'Shorts', 'Jacket'];
+  
+  // State for Available Products (with localStorage persistence)
+  const [availableProducts, setAvailableProducts] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('availableProducts');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error('Failed to parse availableProducts from localStorage', e);
+    }
+    return DEFAULT_PRODUCTS;
+  });
+
+  const handleAddProduct = (newProduct: string) => {
+    if (newProduct && !availableProducts.includes(newProduct)) {
+      const updated = [...availableProducts, newProduct];
+      setAvailableProducts(updated);
+      localStorage.setItem('availableProducts', JSON.stringify(updated));
+    }
+  };
+  // const [activeTab, setActiveTab] = useState<NavOption>('Billing');
 
   // Calculate Total Revenue automatically from valid entries
   // const totalRevenue = entries.reduce(
@@ -50,7 +73,7 @@ const Dashboard: React.FC = () => {
   //   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6 flex flex-col items-center">
+    <div className="bg-gray-100 p-6 flex flex-col items-center "> 
       {/* Main Container */}
       <div className="w-full max-w-5xl bg-white rounded-xl shadow-lg flex flex-col overflow-hidden">
 
@@ -59,8 +82,7 @@ const Dashboard: React.FC = () => {
           <div className="flex items-center space-x-2">
             {/* <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-xl">L</span>
-            </div> */}
-            <h1 className="text-xl font-bold text-gray-800 tracking-tight">Addy's Collections</h1>
+            </div> */}  
           </div>
 
           {/* <div className="bg-green-100 text-green-700 px-4 py-2 rounded-full font-semibold text-sm border border-green-200">
@@ -135,7 +157,12 @@ const Dashboard: React.FC = () => {
           {/* Placeholders for Future Modules */}
           <div className="grid grid-cols-1 gap-8">
             {/* Product Table Module */}
-            <Entries rows={entries} setRows={setEntries} />
+            <Entries 
+              rows={entries} 
+              setRows={setEntries} 
+              availableProducts={availableProducts}
+              onAddProduct={handleAddProduct}
+            />
 
             <Billing customer={customer} entries={entries} />
           </div>
@@ -151,4 +178,4 @@ const Dashboard: React.FC = () => {
   );
 };
 
-export default Dashboard;
+export default ConsumerBilling;

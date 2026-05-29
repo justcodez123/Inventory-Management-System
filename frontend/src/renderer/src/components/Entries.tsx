@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import './Entries.css';
+import './styles/Entries.css';
+import { AddMoreModal } from './Modals/AddMore';
 
 export interface EntryRow {
   id: string;
@@ -13,13 +14,18 @@ export interface EntryRow {
 interface EntriesProps {
   rows: EntryRow[];
   setRows: React.Dispatch<React.SetStateAction<EntryRow[]>>;
+  availableProducts: string[];
+  onAddProduct: (product: string) => void;
 }
 
-const AVAILABLE_PRODUCTS = [
-  'Tshirt', 'Jeans', 'Sando', 'Trousers', 'Shirt', 'Shorts', 'Jacket'
+const PaymentModes: string[] = [
+  'Cash',
+  'UPI',
+  'Credit Card',
+  'Debit Card'
 ];
 
-const Entries: React.FC<EntriesProps> = ({ rows, setRows }) => {
+const Entries: React.FC<EntriesProps> = ({ rows, setRows, availableProducts, onAddProduct }) => {
   // At Start (i.e. at the time, where nothing is entered), there must be empty Screen cells.
   useEffect(() => {
     if (rows.length === 0) {
@@ -65,10 +71,6 @@ const Entries: React.FC<EntriesProps> = ({ rows, setRows }) => {
     setRows(prev => prev.filter(row => row.id !== id));
   };
 
-  // We can remove submit button from here and put it in dashboard if needed,
-  // but let's keep it if they want to submit the entries.
-  // Actually, wait, the "submit" button in Entries was asked in the previous prompt. 
-  // Let's just keep it, or remove it? Let's keep it to avoid regression, or change it to just fire an event.
   const handleSubmit = () => {
     if (window.confirm('Do you want to submit an application?')) {
       console.log('Submitted Entries:', rows);
@@ -107,10 +109,24 @@ const Entries: React.FC<EntriesProps> = ({ rows, setRows }) => {
                     required
                   >
                     <option value="" disabled>Select Product</option>
-                    {AVAILABLE_PRODUCTS.map(prod => (
+                    {availableProducts.map(prod => (
                       <option key={prod} value={prod}>{prod}</option>
                     ))}
+                    <option value="Add More">Add More...</option>
                   </select>
+                  
+                  {row.product === 'Add More' && (
+                     <AddMoreModal 
+                        existingProducts={availableProducts}
+                        onAdd={(newProduct) => {
+                          onAddProduct(newProduct);
+                          handleRowChange(row.id, 'product', newProduct);
+                        }}
+                        onClose={() => {
+                          handleRowChange(row.id, 'product', '');
+                        }}
+                     />
+                  )}
                 </td>
                 <td className="entries-cell">
                   <input 
@@ -142,7 +158,7 @@ const Entries: React.FC<EntriesProps> = ({ rows, setRows }) => {
                     readOnly
                   />
                 </td>
-                <td className="entries-cell">
+                {/* <td className="entries-cell">
                   <input 
                     type="text" 
                     className="entries-input"
@@ -151,7 +167,24 @@ const Entries: React.FC<EntriesProps> = ({ rows, setRows }) => {
                     required
                     onChange={(e) => handleRowChange(row.id, 'modeOfPayment', e.target.value)}
                   />
+                </td> */}
+                
+                <td className="entries-cell">
+                  <select
+                    className="entries-input"
+                    value={row.modeOfPayment}
+                    onChange={(e) => handleRowChange(row.id, 'modeOfPayment', e.target.value)}
+                    required
+                  >
+                    <option value="" disabled>Select Payment Mode</option>
+                    {PaymentModes.map((mode) => (
+                      <option key={mode} value={mode}>
+                        {mode}
+                      </option>
+                    ))}
+                  </select>
                 </td>
+
                 <td className="entries-cell">
                   <button 
                     className="entries-delete-btn"

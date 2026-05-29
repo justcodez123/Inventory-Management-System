@@ -1,5 +1,5 @@
 import React from 'react';
-import './Billing.css';
+import './styles/Billing.css';
 import { EntryRow } from './Entries';
 
 interface BillingProps {
@@ -10,8 +10,9 @@ interface BillingProps {
 const Billing: React.FC<BillingProps> = ({ customer, entries }) => {
   const handlePrint = () => {
     const dateStr = (customer.date || new Date().toISOString().split('T')[0]).replace(/-/g, '');
-    const nameStr = customer.name ? `_${customer.name.replace(/\s+/g, '_')}` : '';
-    const defaultFilename = `Invoice${nameStr}_${dateStr}.pdf`;
+    //const nameStr = customer.name ? `_${customer.name.replace(/\s+/g, '_')}` : '';
+    const numberStr = customer.contactNo ? `_${customer.contactNo}` : '';
+    const defaultFilename = `Invoice${numberStr}_${dateStr}.pdf`;
     
     // Check if running inside Electron
     // @ts-ignore
