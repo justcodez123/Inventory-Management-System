@@ -2,9 +2,31 @@ import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { writeFileSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { autoUpdater } from 'electron-updater'
 // import icon from '../../resources/icon.png?asset'
 
 function createWindow(): void {
+
+  autoUpdater.checkForUpdatesAndNotify();
+
+  autoUpdater.on('update-downloaded', () => {
+    dialog.showMessageBox({
+      type: 'info',
+      title: 'Update Ready',
+      message: 'A new version has been downloaded. Restart the application to apply the updates.',
+      buttons: ['Restart Now', 'Later']
+    }).then((result) => {
+      if (result.response === 0) {
+        // User clicked "Restart Now"
+        autoUpdater.quitAndInstall();
+      }
+    });
+  }); 
+
+  autoUpdater.on('error', (error) => {
+    console.error('Update failed:', error)
+  })
+
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 900,

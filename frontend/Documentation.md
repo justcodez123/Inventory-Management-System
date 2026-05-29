@@ -53,15 +53,3 @@ The receipt generation component that renders the final bill and handles the PDF
 - **State Persistence**: The `AVAILABLE_PRODUCTS` list was migrated from a hardcoded array to a dynamic React state managed in `ConsumerDashboard.tsx`. It uses `localStorage` to permanently save newly added products between app restarts without needing a backend database.
 - **AddMoreModal**: A custom, React Portal-based modal (`createPortal`) that allows users to quickly add custom products to the inventory. Using a portal guarantees the modal renders cleanly at the root level of the application, avoiding CSS glitches and clipping from nested table rows.
 
-## 7. Deployment & Distribution (Shipping the App)
-As an Electron desktop application, the app does not require Docker or server containerization. It compiles natively into standard installer files.
-- **Building Installers**: The app leverages `electron-builder` (already configured in `package.json`) to generate double-clickable setup files for end users.
-  - Windows: Run `npm run build:win`
-  - macOS: Run `npm run build:mac`
-  - Linux: Run `npm run build:linux`
-- **Output**: The compiled setup executable files will be automatically placed in the `dist` folder.
-
-## 8. Future Roadmap: Auto-Updating
-To push seamless updates to users in the future, the app will adopt Electron's native Auto-Update ecosystem:
-1. **GitHub Releases**: Compiled installers (e.g., v1.0.0, v1.1.0) will be published directly to GitHub Releases.
-2. **electron-updater**: We will integrate the `electron-updater` package into the main process. Upon app launch, it will silently check the GitHub repository for a newer version, securely download it in the background, and prompt the user to restart the application to apply the update.

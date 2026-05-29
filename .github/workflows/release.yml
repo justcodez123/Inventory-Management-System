@@ -1,0 +1,37 @@
+name: Build and Release Electron App
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger the workflow automatically when you push a tag like v1.0.0
+
+jobs:
+  release:
+    # Run on a Windows machine to properly build the .exe installer
+    runs-on: windows-latest
+    
+    # Grant permissions for the GITHUB_TOKEN to create releases
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        working-directory: ./frontend
+        run: npm install
+
+      - name: Build Application & Publish Release
+        working-directory: ./frontend
+        # Use the built-in GITHUB_TOKEN so you don't need to create your own!
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm run build
+          npx electron-builder --win -p always
