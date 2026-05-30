@@ -1,9 +1,9 @@
 {
   "name": "inventory-management-system",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Inventory Management System",
   "main": "./out/main/index.js",
-  "author": "example.com",
+  "author": "Aashish Kaaley",
   "repository": "https://github.com/justcodez123/Inventory-Management-System",
   "homepage": "https://electron-vite.org",
   "scripts": {
