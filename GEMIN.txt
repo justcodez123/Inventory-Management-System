@@ -1,12 +1,5 @@
-## 1. Deployment & Distribution (Shipping the App)
-As an Electron desktop application, the app does not require Docker or server containerization. It compiles natively into standard installer files.
-- **Building Installers**: The app leverages `electron-builder` (already configured in `package.json`) to generate double-clickable setup files for end users.
-  - Windows: Run `npm run build:win`
-  - macOS: Run `npm run build:mac`
-  - Linux: Run `npm run build:linux`
-- **Output**: The compiled setup executable files will be automatically placed in the `dist` folder.
+1. Create a Implementation plan for Backend Database using SQLite
+(As it is a Desktop Application , we should use SQLite as we cannot rely on the user having internet connection)
 
-## 2. Future Roadmap: Auto-Updating
-To push seamless updates to users in the future, the app will adopt Electron's native Auto-Update ecosystem:
-1. **GitHub Releases**: Compiled installers (e.g., v1.0.0, v1.1.0) will be published directly to GitHub Releases.
-2. **electron-updater**: We will integrate the `electron-updater` package into the main process. Upon app launch, it will silently check the GitHub repository for a newer version, securely download it in the background, and prompt the user to restart the application to apply the update.
+2. Backend language JavaScript, as its an electron app.
+
