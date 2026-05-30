@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Entries, { EntryRow } from '../components/Entries';
 import Billing from '../components/Billing';
 //import { Navbar, NavOption } from '../components/Navbar';

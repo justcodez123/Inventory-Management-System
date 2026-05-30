@@ -31,7 +31,7 @@ function initDb() {
     db.exec("ALTER TABLE consumer_sales_transactions ADD COLUMN card_amount REAL DEFAULT 0");
     db.exec("ALTER TABLE consumer_sales_transactions ADD COLUMN upi_amount REAL DEFAULT 0");
     db.exec("ALTER TABLE consumer_sales_transactions ADD COLUMN credit_amount REAL DEFAULT 0");
-  } catch (e) {
+  } catch {
     // Columns already exist
   }
 }
