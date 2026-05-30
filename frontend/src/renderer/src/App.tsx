@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import ConsumerBilling from './pages/ConsumerDashboard';
+import Records from './pages/Records';
 import { Navbar, NavOption } from './components/Navbar';
 
 function App(): React.JSX.Element {
@@ -8,7 +9,7 @@ function App(): React.JSX.Element {
     <div className='flex flex-col h-screen overflow-hidden'>
       <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
       <div className='flex-1 overflow-y-auto'>
-        <ConsumerBilling />
+        {activeTab === 'Billing' ? <ConsumerBilling /> : <Records />}
       </div>
     </div>
   ) 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Entries, { EntryRow } from '../components/Entries';
 import Billing from '../components/Billing';
 //import { Navbar, NavOption } from '../components/Navbar';
@@ -16,9 +16,28 @@ const ConsumerBilling: React.FC = () => {
   const [customer, setCustomer] = useState<CustomerDetails>({
     name: '',
     contactNo: '',
-    // date: new Date().toISOString().split('T')[0], // Default to today's date
-    date: ''
+    date: new Date().toISOString().split('T')[0]
   });
+
+  const [dailyTotals, setDailyTotals] = useState({ Total: 0, Cash: 0, Card: 0, UPI: 0, Credit: 0 });
+
+  const fetchDailyTotals = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      // @ts-ignore
+      if (window.electron) {
+        // @ts-ignore
+        const totals = await window.electron.ipcRenderer.invoke('get-daily-totals', today);
+        setDailyTotals(totals);
+      }
+    } catch (err) {
+      console.error('Failed to fetch totals', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchDailyTotals();
+  }, []);
 
   // State for Product Entries
   const [entries, setEntries] = useState<EntryRow[]>([]);
@@ -93,6 +112,30 @@ const ConsumerBilling: React.FC = () => {
         {/* Content Area */}
         <main className="p-8 space-y-8">
 
+          {/* Daily Totals Section */}
+          {/* <section className="grid grid-cols-2 md:grid-cols-5 gap-6">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
+              <span className="text-gray-500 text-sm font-medium">Total Sale</span>
+              <span className="text-2xl font-bold text-indigo-600">₹{dailyTotals.Total.toFixed(2)}</span>
+            </div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
+              <span className="text-gray-500 text-sm font-medium">Cash</span>
+              <span className="text-2xl font-bold text-green-600">₹{dailyTotals.Cash.toFixed(2)}</span>
+            </div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
+              <span className="text-gray-500 text-sm font-medium">Card</span>
+              <span className="text-2xl font-bold text-blue-600">₹{dailyTotals.Card.toFixed(2)}</span>
+            </div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
+              <span className="text-gray-500 text-sm font-medium">UPI</span>
+              <span className="text-2xl font-bold text-purple-600">₹{dailyTotals.UPI.toFixed(2)}</span>
+            </div>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
+              <span className="text-gray-500 text-sm font-medium">Credit</span>
+              <span className="text-2xl font-bold text-red-500">₹{dailyTotals.Credit.toFixed(2)}</span>
+            </div>
+          </section> */}
+
           {/* Customer Details Section */}
           <section className="p-6 border border-gray-200 rounded-xl bg-gray-50/50">
             <h2 className="text-lg font-semibold text-gray-700 mb-6 flex items-center">
@@ -164,7 +207,7 @@ const ConsumerBilling: React.FC = () => {
               onAddProduct={handleAddProduct}
             />
 
-            <Billing customer={customer} entries={entries} />
+            <Billing customer={customer} entries={entries} onTransactionSubmit={fetchDailyTotals} />
           </div>
 
         </main>

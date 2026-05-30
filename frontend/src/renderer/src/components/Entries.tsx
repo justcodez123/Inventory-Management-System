@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import './styles/Entries.css';
 import { AddMoreModal } from './Modals/AddMore';
+import { NoteModal } from './Modals/NoteModal';
 
 export interface EntryRow {
   id: string;
@@ -9,6 +10,7 @@ export interface EntryRow {
   rate: number | '';
   amount: number | '';
   modeOfPayment: string;
+  note?: string;
 }
 
 interface EntriesProps {
@@ -22,10 +24,13 @@ const PaymentModes: string[] = [
   'Cash',
   'UPI',
   'Credit Card',
-  'Debit Card'
+  'Debit Card', 
+  'On Credit'
 ];
 
 const Entries: React.FC<EntriesProps> = ({ rows, setRows, availableProducts, onAddProduct }) => {
+  const [editingNoteRowId, setEditingNoteRowId] = useState<string | null>(null);
+
   // At Start (i.e. at the time, where nothing is entered), there must be empty Screen cells.
   useEffect(() => {
     if (rows.length === 0) {
@@ -40,7 +45,8 @@ const Entries: React.FC<EntriesProps> = ({ rows, setRows, availableProducts, onA
       qty: '',
       rate: '',
       amount: '',
-      modeOfPayment: ''
+      modeOfPayment: '',
+      note: ''
     };
     setRows((prev) => [...prev, newRow]);
   };
@@ -71,12 +77,21 @@ const Entries: React.FC<EntriesProps> = ({ rows, setRows, availableProducts, onA
     setRows(prev => prev.filter(row => row.id !== id));
   };
 
-  const handleSubmit = () => {
-    if (window.confirm('Do you want to submit an application?')) {
-      console.log('Submitted Entries:', rows);
-      alert('Application submitted successfully!');
+  const handleSaveNote = (note: string) => {
+    if (editingNoteRowId) {
+      setRows(prevRows => prevRows.map(row => 
+        row.id === editingNoteRowId ? { ...row, note } : row
+      ));
     }
+    setEditingNoteRowId(null);
   };
+
+  // const handleSubmit = () => {
+  //   if (window.confirm('Do you want to submit an application?')) {
+  //     console.log('Submitted Entries:', rows);
+  //     alert('Application submitted successfully!');
+  //   }
+  // };
 
   return (
     <div className="entries-container">
@@ -94,6 +109,7 @@ const Entries: React.FC<EntriesProps> = ({ rows, setRows, availableProducts, onA
               <th>Rate</th>
               <th>Amount</th>
               <th>Mode of Payment</th>
+              <th>Note</th>
               <th style={{ width: '50px' }}></th>
             </tr>
           </thead>
@@ -184,6 +200,25 @@ const Entries: React.FC<EntriesProps> = ({ rows, setRows, availableProducts, onA
                     ))}
                   </select>
                 </td>
+                
+                <td className="entries-cell px-2">
+                  <div className="flex items-center space-x-2">
+                    <input 
+                      type="text"
+                      className="entries-input text-xs"
+                      placeholder="Note..."
+                      value={row.note || ''}
+                      onChange={(e) => handleRowChange(row.id, 'note', e.target.value)}
+                    />
+                    <button 
+                      onClick={() => setEditingNoteRowId(row.id)}
+                      className="text-indigo-600 hover:text-indigo-800 flex-shrink-0 font-medium text-xs px-2 py-1 bg-indigo-50 rounded-md"
+                      title="Edit Note"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                </td>
 
                 <td className="entries-cell">
                   <button 
@@ -207,17 +242,18 @@ const Entries: React.FC<EntriesProps> = ({ rows, setRows, availableProducts, onA
 
       <div className="entries-actions">
         <button className="entries-submit-btn" onClick={handleAddRow}>
-          {/* <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg> */}
           Add 
         </button>
-
-        <button className="entries-add-btn" onClick={handleSubmit}>
-          Submit
-        </button>
       </div>
+
+      {editingNoteRowId && (
+        <NoteModal
+          isOpen={!!editingNoteRowId}
+          initialNote={rows.find(r => r.id === editingNoteRowId)?.note || ''}
+          onSave={handleSaveNote}
+          onClose={() => setEditingNoteRowId(null)}
+        />
+      )}
     </div>
   );
 };

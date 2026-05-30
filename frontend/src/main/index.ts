@@ -1,9 +1,83 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
-import { writeFileSync } from 'fs'
+import { writeFileSync, existsSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { autoUpdater } from 'electron-updater'
-// import icon from '../../resources/icon.png?asset'
+import Database from 'better-sqlite3'
+import * as XLSX from 'xlsx'
+import os from 'os'
+
+// Database initialization
+let db: Database.Database;
+
+function initDb() {
+  const dbPath = join(app.getPath('userData'), 'inventory.db');
+  db = new Database(dbPath);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS consumer_sales_transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT,
+      customer_name TEXT,
+      contact_no TEXT,
+      payment_mode TEXT,
+      total_amount REAL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  try {
+    db.exec("ALTER TABLE consumer_sales_transactions ADD COLUMN notes TEXT");
+    db.exec("ALTER TABLE consumer_sales_transactions ADD COLUMN cash_amount REAL DEFAULT 0");
+    db.exec("ALTER TABLE consumer_sales_transactions ADD COLUMN card_amount REAL DEFAULT 0");
+    db.exec("ALTER TABLE consumer_sales_transactions ADD COLUMN upi_amount REAL DEFAULT 0");
+    db.exec("ALTER TABLE consumer_sales_transactions ADD COLUMN credit_amount REAL DEFAULT 0");
+  } catch (e) {
+    // Columns already exist
+  }
+}
+
+// Excel backup initialization
+function backupToExcel(record: any) {
+  try {
+    const documentsPath = join(os.homedir(), 'Documents');
+    const excelPath = join(documentsPath, 'Consumer_Sales_Transactions.xlsx');
+    
+    let workbook: XLSX.WorkBook;
+    let worksheet: XLSX.WorkSheet;
+    const sheetName = 'Consumer Sales Transactions';
+
+    if (existsSync(excelPath)) {
+      workbook = XLSX.readFile(excelPath);
+      worksheet = workbook.Sheets[sheetName];
+      if (!worksheet) {
+        worksheet = XLSX.utils.json_to_sheet([]);
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+      }
+    } else {
+      workbook = XLSX.utils.book_new();
+      worksheet = XLSX.utils.json_to_sheet([]);
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+    }
+
+    const newRow = {
+      Date: record.date,
+      'Customer Name': record.customer_name,
+      'Contact No': record.contact_no,
+      'Total Sale': record.total_amount,
+      Cash: record.cash_amount || 0,
+      Card: record.card_amount || 0,
+      UPI: record.upi_amount || 0,
+      Credit: record.credit_amount || 0,
+      Notes: record.notes || ''
+    };
+
+    XLSX.utils.sheet_add_json(worksheet, [newRow], { skipHeader: true, origin: -1 });
+    XLSX.writeFile(workbook, excelPath);
+  } catch (error) {
+    console.error('Failed to backup to Excel:', error);
+  }
+}
+
 
 function createWindow(): void {
 
@@ -62,6 +136,7 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  initDb();
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
@@ -75,7 +150,7 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
-  // Save Bill to PDF
+  // Save Bill to PDF 
   ipcMain.on('save-bill-pdf', async (event, defaultFilename) => {
     const webContents = event.sender
     
@@ -104,6 +179,98 @@ app.whenReady().then(() => {
       webContents.send('save-pdf-error', errorMessage)
     }
   })
+
+  // Show Message Box
+  ipcMain.handle('show-message-box', async (_event, options) => {
+    return await dialog.showMessageBox(options);
+  });
+
+  // Submit Transaction
+  ipcMain.handle('submit-transaction', async (_event, record) => {
+    try {
+      const stmt = db.prepare(`
+        INSERT INTO consumer_sales_transactions 
+        (date, customer_name, contact_no, total_amount, cash_amount, card_amount, upi_amount, credit_amount, notes)
+        VALUES (@date, @customer_name, @contact_no, @total_amount, @cash_amount, @card_amount, @upi_amount, @credit_amount, @notes)
+      `);
+      stmt.run(record);
+      
+      // Run backup asynchronously so it doesn't block UI
+      setTimeout(() => backupToExcel(record), 0);
+      return { success: true };
+    } catch (error) {
+      console.error('Database insert error:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // Get Daily Totals
+  ipcMain.handle('get-daily-totals', async (_event, dateStr) => {
+    try {
+      // dateStr is 'YYYY-MM-DD'
+      const row = db.prepare(`
+        SELECT SUM(total_amount) as totalAmount,
+               SUM(cash_amount) as totalCash,
+               SUM(card_amount) as totalCard,
+               SUM(upi_amount) as totalUPI,
+               SUM(credit_amount) as totalCredit
+        FROM consumer_sales_transactions
+        WHERE date = ?
+      `).get(dateStr) as any;
+
+      return {
+        Total: row?.totalAmount || 0,
+        Cash: row?.totalCash || 0,
+        Card: row?.totalCard || 0,
+        UPI: row?.totalUPI || 0,
+        Credit: row?.totalCredit || 0
+      };
+    } catch (error) {
+      console.error('Failed to get daily totals:', error);
+      return { Total: 0, Cash: 0, Card: 0, UPI: 0, Credit: 0 };
+    }
+  });
+
+  // Get Filtered Records
+  ipcMain.handle('get-filtered-records', async (_event, filters) => {
+    try {
+      let query = 'SELECT * FROM consumer_sales_transactions WHERE 1=1';
+      const params: any[] = [];
+
+      if (filters.startDate) {
+        query += ' AND date >= ?';
+        params.push(filters.startDate);
+      }
+      if (filters.endDate) {
+        query += ' AND date <= ?';
+        params.push(filters.endDate);
+      }
+      if (filters.customerName) {
+        query += ' AND customer_name LIKE ?';
+        params.push(`%${filters.customerName}%`);
+      }
+      if (filters.contactNo) {
+        query += ' AND contact_no LIKE ?';
+        params.push(`%${filters.contactNo}%`);
+      }
+      // if (filters.paymentMode) {
+      //   // Since we dropped overall paymentMode, filtering by it requires checking the amounts
+      //   if (filters.paymentMode === 'Cash') query += ' AND cash_amount > 0';
+      //   else if (filters.paymentMode === 'Card') query += ' AND card_amount > 0';
+      //   else if (filters.paymentMode === 'UPI') query += ' AND upi_amount > 0';
+      //   else if (filters.paymentMode === 'On Credit') query += ' AND credit_amount > 0';
+      // }
+
+      query += ' ORDER BY date DESC, id DESC';
+      
+      const records = db.prepare(query).all(params);
+      return records;
+    } catch (error) {
+      console.error('Failed to get records:', error);
+      return [];
+    }
+  });
+
 
   createWindow()
 

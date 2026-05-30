@@ -36,3 +36,9 @@ While incredibly powerful, combining Electron and Spring Boot comes with a few s
     Dynamic Ports: You cannot hardcode Spring Boot to run on port 8080, because another app on the user's computer might be using it, causing a crash. Electron must find a random open port, pass that port to Spring Boot on startup, and tell React where to send API requests.
 
     Orphaned Processes: You have to write strict exit handlers in Node.js. If the user clicks the "X" to close the Electron window, Electron must explicitly kill the Java child process, otherwise, Spring Boot will remain running invisibly in the computer's background memory.
+
+---
+UPDATE: Architecture Pivot (Backend Replacement)
+Based on recent development, the Spring Boot sidecar was dropped in favor of handling data directly within the Electron Main Process. 
+The application now uses `better-sqlite3` native bindings inside the Electron main process to directly interface with an `inventory.db` file located in the user's `userData` folder. This completely eliminates the need for bundling a JRE, managing dynamic ports, and dealing with orphaned child process management, drastically reducing the application bundle size.
+Simultaneously, the main process now also utilizes the `xlsx` module to dynamically maintain an Excel spreadsheet backup in the user's `Documents` folder asynchronously, ensuring robust data redundancy without freezing the React UI.

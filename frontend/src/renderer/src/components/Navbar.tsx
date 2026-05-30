@@ -2,7 +2,7 @@ import React from 'react';
 import './styles/Navbar.css';
 
 /* Wholesalers, Records, and other features can be added late */
-export type NavOption = 'Billing';
+export type NavOption = 'Billing' | 'Records';
 
 interface NavbarProps {
   activeTab: NavOption;
@@ -11,7 +11,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
   // Define the navigation options
-  const options: NavOption[] = ['Billing'];
+  const options: NavOption[] = ['Billing', 'Records'];
 
   return (
     <nav className="navbar-container">

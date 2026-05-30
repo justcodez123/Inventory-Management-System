@@ -3,7 +3,7 @@ frontend-app/
 ├── electron.vite.config.ts # Vite bundler configuration
 └── src/
     ├── main/             # 🧠 THE BRAIN (Node.js)
-    │   └── index.ts      # Opens the window, manages OS tasks, starts Spring Boot later
+    │   └── index.ts      # Opens the window, manages OS tasks, handles SQLite DB and Excel backups
     │
     ├── preload/          # 🌉 THE BRIDGE (Security Layer)
     │   └── index.ts      # Creates the IPC channels so React can talk to Node safely
@@ -12,5 +12,14 @@ frontend-app/
         ├── index.html    # The single HTML file
         └── src/
             ├── App.tsx   # Your main React component
+            ├── main.tsx  # Application entry point
             ├── assets/   # Your logo, fonts, and CSS
-            └── components/ # 👈 Where we will build your wireframes!
+            ├── pages/    # Main Views
+            │   ├── ConsumerDashboard.tsx
+            │   └── Records.tsx
+            └── components/ # Reusable UI pieces
+                ├── Entries.tsx
+                ├── Billing.tsx
+                └── Modals/
+                    ├── AddMore.tsx
+                    └── NoteModal.tsx
