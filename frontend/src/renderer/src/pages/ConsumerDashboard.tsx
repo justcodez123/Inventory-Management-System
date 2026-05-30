@@ -19,25 +19,7 @@ const ConsumerBilling: React.FC = () => {
     date: new Date().toISOString().split('T')[0]
   });
 
-  const [dailyTotals, setDailyTotals] = useState({ Total: 0, Cash: 0, Card: 0, UPI: 0, Credit: 0 });
 
-  const fetchDailyTotals = async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      // @ts-ignore
-      if (window.electron) {
-        // @ts-ignore
-        const totals = await window.electron.ipcRenderer.invoke('get-daily-totals', today);
-        setDailyTotals(totals);
-      }
-    } catch (err) {
-      console.error('Failed to fetch totals', err);
-    }
-  };
-
-  useEffect(() => {
-    fetchDailyTotals();
-  }, []);
 
   // State for Product Entries
   const [entries, setEntries] = useState<EntryRow[]>([]);
@@ -207,7 +189,7 @@ const ConsumerBilling: React.FC = () => {
               onAddProduct={handleAddProduct}
             />
 
-            <Billing customer={customer} entries={entries} onTransactionSubmit={fetchDailyTotals} />
+            <Billing customer={customer} entries={entries} />
           </div>
 
         </main>
