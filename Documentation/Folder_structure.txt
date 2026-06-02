@@ -1,4 +1,4 @@
-frontend-app/
+inventory-app/
 ├── package.json          # Your dependencies and build scripts
 ├── electron.vite.config.ts # Vite bundler configuration
 └── src/
@@ -15,8 +15,8 @@ frontend-app/
             ├── main.tsx  # Application entry point
             ├── assets/   # Your logo, fonts, and CSS
             ├── pages/    # Main Views
-            │   ├── ConsumerDashboard.tsx
-            │   └── Records.tsx
+            │   ├── ConsumerDashboard.tsx # Handles state, validation, and submission
+            │   └── Records.tsx           # Historical database view
             └── components/ # Reusable UI pieces
                 ├── Entries.tsx
                 ├── Billing.tsx

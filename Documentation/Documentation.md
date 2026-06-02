@@ -8,9 +8,13 @@ This is the main parent container (Page) for the dashboard, coordinating the sta
   - Implements `customer` state (`name`, `contactNo`, `date`) to track customer details.
   - Implements `entries` state (`EntryRow[]`) to maintain the list of products added by the user.
 - **UI & Layout**: 
-  - Designed using Tailwind CSS for a modern, responsive, and clean layout.
-  - Divided into a Header, a Customer Details section, and a dynamic grid for the `Entries` and `Billing` modules.
-  - Acts as the single source of truth for the billing data.
+  - Designed using Tailwind CSS with a wide layout (`max-w-7xl`) for an expansive data view.
+  - Divided into a Header, Customer Details section, and a dynamic grid for `Entries` and `Billing`.
+  - Acts as the single source of truth for billing data and handles the final transaction submission.
+- **Validation & Security**:
+  - Implements strict validation on submission to prevent completely empty rows or missing mandatory fields (Product, Qty, Rate, Size).
+  - Enforces mandatory notes for 'On Credit' payment modes.
+  - Calls IPC methods to check for duplicate transactions before allowing the user to submit (preventing accidental double-clicks or duplicate entries).
 
 ## 2. Entries.tsx
 A dynamic, editable table component responsible for managing the items being billed.
@@ -24,12 +28,11 @@ A dynamic, editable table component responsible for managing the items being bil
 
 ## 3. Billing.tsx
 The receipt generation component that renders the final bill and handles the PDF export.
-- **Data Intake**: Receives `customer` and `entries` data as props from `ConsumerDashboard.tsx`.
-- **Filtering & Totals**: Automatically filters out incomplete/empty rows before rendering and calculates the final `totalAmount`.
+- **Data Intake**: Receives `customer`, `entries`, and calculated totals as props from `ConsumerDashboard.tsx`.
+- **Filtering & UI**: Automatically filters out incomplete/empty rows before rendering the final PDF bill view. (Note: The actual "Submit" logic was moved to ConsumerDashboard to centralize validation).
 - **Data Aggregation**: Aggregates payment amounts by mode (Cash, Card, UPI, Credit) and compiles all entry notes to send to the backend.
 - **Electron IPC Integration**:
-  - Includes a "Save PDF" button that triggers `handlePrint()`.
-  - Dispatches an IPC event (`submit-transaction`) to the Electron main process to save data to SQLite and Excel asynchronously.
+  - Exists mostly as a visual component for the `window.print()` / PDF generation flow.
 
 ## 4. Records.tsx
 A dashboard for viewing historical transaction records with filtering capabilities.
@@ -38,7 +41,7 @@ A dashboard for viewing historical transaction records with filtering capabiliti
   - Allows filtering by start date, end date, customer name, and contact number.
   - Includes a KPI summary section displaying total sales and breakdowns by payment mode (Cash, Card, UPI, Credit).
   - Features a toggle button to visually hide/show the KPI section.
-- **UI & Layout**: Displays records in a clean table layout, highlighting individual payment mode breakdowns and aggregated notes for each transaction.
+- **UI & Layout**: Displays records in a wide (`max-w-7xl`) table layout. Columns now include a localized `Time` column (derived from `created_at`) and an `Items (Qty & Size)` summary column which condenses the entire purchase list into a single, readable string.
 
 ## 5. CSS Files
 ### Entries.css & Billing.css
@@ -50,5 +53,6 @@ A dashboard for viewing historical transaction records with filtering capabiliti
 - **NoteModal**: A portal-based modal that lets users enter specific details or due dates for individual products. Originally intended for "On Credit" entries, it was generalized to support notes for any item in the table.
 
 ## 7. Backend (main/index.ts)
-- **SQLite Database**: Manages the `consumer_sales_transactions` table. Upgraded to store specific payment mode amounts (`cash_amount`, `card_amount`, `upi_amount`, `credit_amount`) and aggregated `notes`.
-- **Excel Backup**: Automatically maintains a localized backup of all transactions in `Documents/Consumer_Sales_Transactions.xlsx` using the `xlsx` library asynchronously so as not to block the UI.
+- **SQLite Database**: Manages the `consumer_sales_transactions` table. Upgraded to store specific payment mode amounts, an `items_summary` string (e.g. "2x Shirt (Size: L)"), and a `created_at` timestamp.
+- **Duplicate Detection**: Includes a new `check-duplicate-transaction` IPC handler that queries the database for exact matches (ignoring contact info) to warn users of duplicates.
+- **Excel Backup**: Automatically maintains a localized backup of all transactions in `Documents/Consumer_Sales_Transactions.xlsx` using the `xlsx` library. Ensures the correct generation of headers for new files and appends data seamlessly.

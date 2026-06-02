@@ -34,6 +34,12 @@ function initDb() {
   } catch {
     // Columns already exist
   }
+
+  try {
+    db.exec("ALTER TABLE consumer_sales_transactions ADD COLUMN items_summary TEXT");
+  } catch {
+    // Column already exists
+  }
 }
 
 // Excel backup initialization
@@ -46,19 +52,6 @@ function backupToExcel(record: any) {
     let worksheet: XLSX.WorkSheet;
     const sheetName = 'Consumer Sales Transactions';
 
-    if (existsSync(excelPath)) {
-      workbook = XLSX.readFile(excelPath);
-      worksheet = workbook.Sheets[sheetName];
-      if (!worksheet) {
-        worksheet = XLSX.utils.json_to_sheet([]);
-        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-      }
-    } else {
-      workbook = XLSX.utils.book_new();
-      worksheet = XLSX.utils.json_to_sheet([]);
-      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-    }
-
     const newRow = {
       Date: record.date,
       'Customer Name': record.customer_name,
@@ -68,10 +61,24 @@ function backupToExcel(record: any) {
       Card: record.card_amount || 0,
       UPI: record.upi_amount || 0,
       Credit: record.credit_amount || 0,
+      'Items Summary': record.items_summary || '',
       Notes: record.notes || ''
     };
 
-    XLSX.utils.sheet_add_json(worksheet, [newRow], { skipHeader: true, origin: -1 });
+    if (existsSync(excelPath)) {
+      workbook = XLSX.readFile(excelPath);
+      worksheet = workbook.Sheets[sheetName];
+      if (!worksheet) {
+        worksheet = XLSX.utils.json_to_sheet([newRow]);
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+      } else {
+        XLSX.utils.sheet_add_json(worksheet, [newRow], { skipHeader: true, origin: -1 });
+      }
+    } else {
+      workbook = XLSX.utils.book_new();
+      worksheet = XLSX.utils.json_to_sheet([newRow]);
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+    }
     XLSX.writeFile(workbook, excelPath);
   } catch (error) {
     console.error('Failed to backup to Excel:', error);
@@ -185,13 +192,36 @@ app.whenReady().then(() => {
     return await dialog.showMessageBox(options);
   });
 
+  // Check Duplicate Transaction
+  ipcMain.handle('check-duplicate-transaction', (_event, record) => {
+    try {
+      const stmt = db.prepare(`
+        SELECT COUNT(*) as count FROM consumer_sales_transactions 
+        WHERE date = @date 
+        AND customer_name = @customer_name 
+        AND total_amount = @total_amount 
+        AND items_summary = @items_summary
+      `);
+      const result = stmt.get({
+        date: record.date,
+        customer_name: record.customer_name,
+        total_amount: record.total_amount,
+        items_summary: record.items_summary
+      }) as { count: number };
+      return result.count > 0;
+    } catch (error) {
+      console.error('Failed to check duplicate:', error);
+      return false; // If it fails, default to false so we don't block them forever
+    }
+  });
+
   // Submit Transaction
   ipcMain.handle('submit-transaction', async (_event, record) => {
     try {
       const stmt = db.prepare(`
         INSERT INTO consumer_sales_transactions 
-        (date, customer_name, contact_no, total_amount, cash_amount, card_amount, upi_amount, credit_amount, notes)
-        VALUES (@date, @customer_name, @contact_no, @total_amount, @cash_amount, @card_amount, @upi_amount, @credit_amount, @notes)
+        (date, customer_name, contact_no, total_amount, cash_amount, card_amount, upi_amount, credit_amount, notes, items_summary)
+        VALUES (@date, @customer_name, @contact_no, @total_amount, @cash_amount, @card_amount, @upi_amount, @credit_amount, @notes, @items_summary)
       `);
       stmt.run(record);
       

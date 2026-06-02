@@ -23,6 +23,9 @@ const ConsumerBilling: React.FC = () => {
 
   // State for Product Entries
   const [entries, setEntries] = useState<EntryRow[]>([]);
+  
+  // State for Payment Details
+  const [paymentDetails, setPaymentDetails] = useState({ modeOfPayment: '', note: '' });
 
   const DEFAULT_PRODUCTS = ['Tshirt', 'Jeans', 'Sando', 'Trousers', 'Shirt', 'Shorts', 'Jacket'];
   
@@ -73,10 +76,156 @@ const ConsumerBilling: React.FC = () => {
 
   //   };
 
+  const handleTransactionSubmit = async () => {
+    // @ts-ignore
+    const isElectron = !!window.electron;
+
+    const showError = async (msg: string) => {
+      if (isElectron) {
+        // @ts-ignore
+        await window.electron.ipcRenderer.invoke('show-message-box', {
+          type: 'warning',
+          title: 'Missing Information',
+          message: msg
+        });
+      } else {
+        alert(msg);
+      }
+    };
+
+    const validEntries = entries.filter(
+      (row) => row.product || row.qty || row.rate || row.size || row.amount
+    );
+
+    if (validEntries.length === 0) {
+      await showError("Please add at least one product to the entries.");
+      return;
+    }
+
+    for (let i = 0; i < validEntries.length; i++) {
+      const row = validEntries[i];
+      if (!row.product || !row.qty || !row.rate || !row.size) {
+        await showError(`Please fill out all mandatory fields (Product, Qty, Rate, Size) for entry #${i + 1}.`);
+        return;
+      }
+    }
+
+    const totalAmount = validEntries.reduce(
+      (sum, row) => sum + (Number(row.amount) || 0),
+      0
+    );
+
+    if (!customer.name) {
+      await showError("Please enter customer name.");
+      return;
+    }
+
+    if (!paymentDetails.modeOfPayment) {
+      await showError("Please select a Mode of Payment.");
+      return;
+    }
+
+    if (paymentDetails.modeOfPayment === 'On Credit' && !paymentDetails.note?.trim()) {
+      await showError("On Credit option needs to have notes (e.g. details of credit).");
+      return;
+    }
+
+    
+    const dateStr = (customer.date || new Date().toISOString().split('T')[0]).replace(/-/g, '');
+    const defaultFilename = `Invoice_${customer.contactNo || 'Guest'}_${dateStr}.pdf`;
+    
+    // Calculate totals per payment mode
+    let cashAmount = 0;
+    let cardAmount = 0;
+    let upiAmount = 0;
+    let creditAmount = 0;
+
+    if (paymentDetails.modeOfPayment === 'Cash') cashAmount = totalAmount;
+    else if (paymentDetails.modeOfPayment === 'Credit Card' || paymentDetails.modeOfPayment === 'Debit Card') cardAmount = totalAmount;
+    else if (paymentDetails.modeOfPayment === 'UPI') upiAmount = totalAmount;
+    else if (paymentDetails.modeOfPayment === 'On Credit') creditAmount = totalAmount;
+    
+    const itemsSummary = validEntries.map(row => `${row.qty}x ${row.product} (Size: ${row.size || '-'})`).join(', ');
+
+    const record = {
+      date: customer.date || new Date().toISOString().split('T')[0],
+      customer_name: customer.name,
+      contact_no: customer.contactNo,
+      total_amount: totalAmount,
+      cash_amount: cashAmount,
+      card_amount: cardAmount,
+      upi_amount: upiAmount,
+      credit_amount: creditAmount,
+      items_summary: itemsSummary,
+      notes: paymentDetails.note || ''
+    };
+
+    if (isElectron) {
+      try {
+        // @ts-ignore
+        const isDuplicate = await window.electron.ipcRenderer.invoke('check-duplicate-transaction', record);
+        if (isDuplicate) {
+          // @ts-ignore
+          const response = await window.electron.ipcRenderer.invoke('show-message-box', {
+            type: 'question',
+            buttons: ['Yes', 'No'],
+            title: 'Duplicate Entry Detected',
+            message: 'This exact entry is already in the database with the same Customer, Qty, Rate, and Amount. Do you want to submit this entry?'
+          });
+          
+          if (response.response === 1) {
+            return;
+          }
+        }
+
+        // @ts-ignore
+        const result = await window.electron.ipcRenderer.invoke('submit-transaction', record);
+        if (result.success) {
+          // After DB save, trigger PDF save if the user wants it
+          // @ts-ignore
+          const response = await window.electron.ipcRenderer.invoke('show-message-box', {
+            type: 'question',
+            buttons: ['Yes', 'No'],
+            title: 'Create PDF',
+            message: 'Do you want to create PDF?'
+          });
+
+          if (response.response === 0) {
+            // @ts-ignore
+            window.electron.ipcRenderer.send('save-bill-pdf', defaultFilename);
+          }
+          
+          // Clear form after successful submit
+          setCustomer({ name: '', contactNo: '', date: new Date().toISOString().split('T')[0] });
+          setEntries([]);
+          setPaymentDetails({ modeOfPayment: '', note: '' });
+        } else {
+          // @ts-ignore
+          await window.electron.ipcRenderer.invoke('show-message-box', {
+            type: 'error',
+            title: 'Database Error',
+            message: 'Failed to save transaction to Database'
+          });
+        }
+      } catch (err) {
+        console.error(err);
+        // @ts-ignore
+        await window.electron.ipcRenderer.invoke('show-message-box', {
+          type: 'error',
+          title: 'Error',
+          message: 'Error occurred while submitting transaction'
+        });
+      }
+    } else {
+      alert("Database and PDF saving is only available in the Electron desktop app. Falling back to browser print.");
+      window.print();
+    }
+  };
+
   return (
     <div className="bg-gray-100 p-6 flex flex-col items-center "> 
       {/* Main Container */}
-      <div className="w-full max-w-5xl bg-white rounded-xl shadow-lg flex flex-col overflow-hidden">
+      <div className="w-full max-w-7xl bg-white rounded-xl shadow-lg flex flex-col overflow-hidden">
 
         {/* Header Section */}
         <header className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white">
@@ -127,9 +276,9 @@ const ConsumerBilling: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Customer Name */}
-              <div className="space-y-2">
-                <label htmlFor="name" className="block text-sm font-medium text-gray-600">
-                  Customer Name
+              <div className="space-y-2" >
+                <label htmlFor="name" className="block text-sm font-bold text-gray-700">
+                  Customer Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -145,7 +294,7 @@ const ConsumerBilling: React.FC = () => {
 
               {/* Contact No */}
               <div className="space-y-2">
-                <label htmlFor="contactNo" className="block text-sm font-medium text-gray-600">
+                <label htmlFor="contactNo" className="block text-sm font-bold text-gray-700">
                   Contact Number
                 </label>
                 <input
@@ -162,8 +311,8 @@ const ConsumerBilling: React.FC = () => {
 
               {/* Date */}
               <div className="space-y-2">
-                <label htmlFor="date" className="block text-sm font-medium text-gray-600">
-                  Date
+                <label htmlFor="date" className="block text-sm font-bold text-gray-700">
+                  Date of Purchase <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
@@ -187,9 +336,12 @@ const ConsumerBilling: React.FC = () => {
               setRows={setEntries} 
               availableProducts={availableProducts}
               onAddProduct={handleAddProduct}
+              paymentDetails={paymentDetails}
+              setPaymentDetails={setPaymentDetails}
+              onSubmit={handleTransactionSubmit}
             />
 
-            <Billing customer={customer} entries={entries} />
+            <Billing customer={customer} entries={entries} paymentDetails={paymentDetails} />
           </div>
 
         </main>

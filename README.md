@@ -7,10 +7,12 @@ An offline-first desktop application built with React and Electron for seamless,
 *   **Dynamic Billing Dashboard**: Real-time total calculation with editable product entries, quantities, and rates.
 *   **Native PDF Export**: Directly generates and saves 1-page PDF invoices to the local file system using Electron IPC.
 *   **Modern UI**: Built with React and Tailwind CSS for a highly responsive, clean, and intuitive user experience.
+*   **Local Database & Historical Records**: Automatically logs transactions to a local SQLite database, viewable in a dedicated historical records dashboard with time-stamps and item summaries.
+*   **Excel Backup**: Automatically mirrors transactions to a local Excel file (`Consumer_Sales_Transactions.xlsx`), guaranteeing data redundancy.
+*   **Strict Data Validation**: Prevents empty/incomplete entries, mandates notes for credit transactions, and features intelligent duplicate-transaction detection.
 *   **Automated CI/CD Pipeline**: Uses GitHub Actions to automatically compile and publish the Windows `.exe` installer on every new release.
 *   **Seamless Auto-Updating**: Integrated `electron-updater` silently downloads the latest releases in the background and upgrades users without manual intervention.
 
 ### 🗺️ Roadmap & Future Scope
-*   **Retailer Dashboard**: A dedicated administrative view to browse historical transaction records.
-*   **Database Integration**: Persistent local storage of all generated invoices and customer data.
-*   **Advanced Search & Filtering**: Easily search past entries by Customer Name, Mode of Payment, Date, and more.
+*   **Wholesaler Dashboard**: A dedicated administrative view to browse historical transaction records of Wholesalers.
+*   **Inventory Management**: A dedicated inventory management system to manage products, stock, prices, and categories. Give the user the power to add, edit, delete, and update products in the inventory. This will allow the user to keep track of his products and also generate new receipts.

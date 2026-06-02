@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import './styles/Entries.css';
 import { AddMoreModal } from './Modals/AddMore';
-import { NoteModal } from './Modals/NoteModal';
 
 export interface EntryRow {
   id: string;
   product: string;
+  size: string;
   qty: number | '';
   rate: number | '';
   amount: number | '';
+}
+
+export interface PaymentDetails {
   modeOfPayment: string;
-  note?: string;
+  note: string;
 }
 
 interface EntriesProps {
@@ -18,6 +21,9 @@ interface EntriesProps {
   setRows: React.Dispatch<React.SetStateAction<EntryRow[]>>;
   availableProducts: string[];
   onAddProduct: (product: string) => void;
+  paymentDetails: PaymentDetails;
+  setPaymentDetails: React.Dispatch<React.SetStateAction<PaymentDetails>>;
+  onSubmit: () => void;
 }
 
 const PaymentModes: string[] = [
@@ -28,8 +34,7 @@ const PaymentModes: string[] = [
   'On Credit'
 ];
 
-const Entries: React.FC<EntriesProps> = ({ rows, setRows, availableProducts, onAddProduct }) => {
-  const [editingNoteRowId, setEditingNoteRowId] = useState<string | null>(null);
+const Entries: React.FC<EntriesProps> = ({ rows, setRows, availableProducts, onAddProduct, paymentDetails, setPaymentDetails, onSubmit }) => {
 
   // At Start (i.e. at the time, where nothing is entered), there must be empty Screen cells.
   useEffect(() => {
@@ -42,11 +47,10 @@ const Entries: React.FC<EntriesProps> = ({ rows, setRows, availableProducts, onA
     const newRow: EntryRow = {
       id: Math.random().toString(36).substring(2, 9),
       product: '',
+      size: '',
       qty: '',
       rate: '',
-      amount: '',
-      modeOfPayment: '',
-      note: ''
+      amount: ''
     };
     setRows((prev) => [...prev, newRow]);
   };
@@ -77,14 +81,7 @@ const Entries: React.FC<EntriesProps> = ({ rows, setRows, availableProducts, onA
     setRows(prev => prev.filter(row => row.id !== id));
   };
 
-  const handleSaveNote = (note: string) => {
-    if (editingNoteRowId) {
-      setRows(prevRows => prevRows.map(row => 
-        row.id === editingNoteRowId ? { ...row, note } : row
-      ));
-    }
-    setEditingNoteRowId(null);
-  };
+
 
   // const handleSubmit = () => {
   //   if (window.confirm('Do you want to submit an application?')) {
@@ -95,22 +92,55 @@ const Entries: React.FC<EntriesProps> = ({ rows, setRows, availableProducts, onA
 
   return (
     <div className="entries-container">
-      <div className="entries-header">
-        <div className="entries-header-icon"></div>
-        <h2>Product Entries</h2>
+      <div className="entries-header" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div className="entries-header-icon"></div>
+          <h2 style={{ margin: 0 }}>Product Entries</h2>
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-6 mt-2 sm:mt-0">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-bold text-gray-700 whitespace-nowrap">
+              Mode of Payment <span className="text-red-500">*</span>
+            </label>
+            <select
+              className="entries-select !py-1 !px-2"
+              value={paymentDetails.modeOfPayment}
+              onChange={(e) => setPaymentDetails(prev => ({ ...prev, modeOfPayment: e.target.value }))}
+              required
+            >
+              <option value="" disabled>Select</option>
+              {PaymentModes.map((mode) => (
+                <option key={mode} value={mode}>
+                  {mode}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-bold text-gray-700 whitespace-nowrap">
+              Note {paymentDetails.modeOfPayment === 'On Credit' && <span className="text-red-500">*</span>}
+            </label>
+            <input 
+              type="text"
+              className="entries-input !py-1 !px-2 w-48"
+              placeholder="Note..."
+              value={paymentDetails.note}
+              onChange={(e) => setPaymentDetails(prev => ({ ...prev, note: e.target.value }))}
+            />
+          </div>
+        </div>
       </div>
 
       <div className="entries-table-wrapper">
         <table className="entries-table">
           <thead className="entries-thead">
             <tr>
-              <th>Product</th>
-              <th>Qty</th>
-              <th>Rate</th>
-              <th>Amount</th>
-              <th>Mode of Payment</th>
-              <th>Note</th>
-              <th style={{ width: '50px' }}></th>
+              <th style={{ fontWeight: 'bold' }}>Product <span className="text-red-500">*</span></th>
+              <th style={{ fontWeight: 'bold' }}>Qty <span className="text-red-500">*</span></th>
+              <th style={{ fontWeight: 'bold' }}>Rate <span className="text-red-500">*</span></th>
+              <th style={{ fontWeight: 'bold' }}>Amount</th>
+              <th style={{ fontWeight: 'bold' }}>Size <span className="text-red-500">*</span></th>
             </tr>
           </thead>
           
@@ -174,51 +204,17 @@ const Entries: React.FC<EntriesProps> = ({ rows, setRows, availableProducts, onA
                     readOnly
                   />
                 </td>
-                {/* <td className="entries-cell">
-                  <input 
-                    type="text" 
-                    className="entries-input"
-                    placeholder="e.g. Cash, UPI"
-                    value={row.modeOfPayment}
-                    required
-                    onChange={(e) => handleRowChange(row.id, 'modeOfPayment', e.target.value)}
-                  />
-                </td> */}
-                
                 <td className="entries-cell">
-                  <select
+                  <input 
+                    type="text"
                     className="entries-input"
-                    value={row.modeOfPayment}
-                    onChange={(e) => handleRowChange(row.id, 'modeOfPayment', e.target.value)}
+                    placeholder="Size"
+                    value={row.size || ''}
                     required
-                  >
-                    <option value="" disabled>Select Payment Mode</option>
-                    {PaymentModes.map((mode) => (
-                      <option key={mode} value={mode}>
-                        {mode}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(e) => handleRowChange(row.id, 'size', e.target.value)}
+                  />
                 </td>
-                
-                <td className="entries-cell px-2">
-                  <div className="flex items-center space-x-2">
-                    <input 
-                      type="text"
-                      className="entries-input text-xs"
-                      placeholder="Note..."
-                      value={row.note || ''}
-                      onChange={(e) => handleRowChange(row.id, 'note', e.target.value)}
-                    />
-                    <button 
-                      onClick={() => setEditingNoteRowId(row.id)}
-                      className="text-indigo-600 hover:text-indigo-800 flex-shrink-0 font-medium text-xs px-2 py-1 bg-indigo-50 rounded-md"
-                      title="Edit Note"
-                    >
-                      Edit
-                    </button>
-                  </div>
-                </td>
+
 
                 <td className="entries-cell">
                   <button 
@@ -226,12 +222,11 @@ const Entries: React.FC<EntriesProps> = ({ rows, setRows, availableProducts, onA
                     onClick={() => handleDeleteRow(row.id)}
                     title="Delete Row"
                   >
-                    {/* <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M3 6h18"></path>
                       <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
                       <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                    </svg> */}
-                    Delete
+                    </svg>
                   </button>
                 </td>
               </tr>
@@ -240,20 +235,19 @@ const Entries: React.FC<EntriesProps> = ({ rows, setRows, availableProducts, onA
         </table>
       </div>
 
-      <div className="entries-actions">
+      <div className="entries-actions" style={{ display: 'flex', gap: '16px' }}>
         <button className="entries-submit-btn" onClick={handleAddRow}>
           Add 
         </button>
+        <button 
+          onClick={onSubmit} 
+          className="entries-submit-btn"
+        >
+          Submit
+        </button>
       </div>
 
-      {editingNoteRowId && (
-        <NoteModal
-          isOpen={!!editingNoteRowId}
-          initialNote={rows.find(r => r.id === editingNoteRowId)?.note || ''}
-          onSave={handleSaveNote}
-          onClose={() => setEditingNoteRowId(null)}
-        />
-      )}
+      
     </div>
   );
 };

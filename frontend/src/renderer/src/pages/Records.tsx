@@ -10,7 +10,9 @@ interface RecordType {
   card_amount: number;
   upi_amount: number;
   credit_amount: number;
+  items_summary?: string;
   notes: string;
+  created_at?: string;
 }
 
 const Records: React.FC = () => {
@@ -62,7 +64,7 @@ const Records: React.FC = () => {
 
   return (
     <div className="bg-gray-100 p-6 flex flex-col items-center min-h-full">
-      <div className="w-full max-w-5xl bg-white rounded-xl shadow-lg flex flex-col overflow-hidden p-8 space-y-8">
+      <div className="w-full max-w-7xl bg-white rounded-xl shadow-lg flex flex-col overflow-hidden p-8 space-y-8">
 
         {/* Summary Section */}
         <div className="flex justify-between items-center">
@@ -71,30 +73,30 @@ const Records: React.FC = () => {
             onClick={() => setShowKPIs(!showKPIs)}
             className="px-4 py-2 bg-indigo-50 text-indigo-600 font-medium rounded-lg hover:bg-indigo-100 transition-colors"
           >
-            {showKPIs ? 'Hide KPIs' : 'Show KPIs'}
+            {showKPIs ? 'Hide' : 'Show'}
           </button>
         </div>
 
         {showKPIs && (
           <section className="grid grid-cols-2 md:grid-cols-5 gap-6">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
-              <span className="text-gray-500 text-sm font-medium">Filtered Total</span>
+              <span className=" text-sm font-medium font-bold">Total Sale</span>
               <span className="text-2xl font-bold text-indigo-600">₹{summary.Total.toFixed(2)}</span>
             </div>
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
-              <span className="text-gray-500 text-sm font-medium">Cash</span>
+              <span className="text-sm font-medium font-bold">Cash</span>
               <span className="text-2xl font-bold text-green-600">₹{summary.Cash.toFixed(2)}</span>
             </div>
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
-              <span className="text-gray-500 text-sm font-medium">Card</span>
+              <span className="text-sm font-medium font-bold">Card</span>
               <span className="text-2xl font-bold text-blue-600">₹{summary.Card.toFixed(2)}</span>
             </div>
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
-              <span className="text-gray-500 text-sm font-medium">UPI</span>
+              <span className="text-sm font-medium font-bold">UPI</span>
               <span className="text-2xl font-bold text-purple-600">₹{summary.UPI.toFixed(2)}</span>
             </div>
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
-              <span className="text-gray-500 text-sm font-medium">Credit</span>
+              <span className="text-sm font-medium font-bold">Credit</span>
               <span className="text-2xl font-bold text-red-500">₹{summary.Credit.toFixed(2)}</span>
             </div>
           </section>
@@ -109,7 +111,7 @@ const Records: React.FC = () => {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-600">Start Date</label>
+              <label className="block text-sm font-medium font-bold">Start Date</label>
               <input
                 type="date"
                 name="startDate"
@@ -119,7 +121,7 @@ const Records: React.FC = () => {
               />
             </div>
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-600">End Date</label>
+              <label className="block text-sm font-medium font-bold">End Date</label>
               <input
                 type="date"
                 name="endDate"
@@ -129,7 +131,7 @@ const Records: React.FC = () => {
               />
             </div>
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-600">Customer Name</label>
+              <label className="block text-sm font-medium font-bold">Customer Name</label>
               <input
                 type="text"
                 name="customerName"
@@ -140,7 +142,7 @@ const Records: React.FC = () => {
               />
             </div>
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-600">Contact No</label>
+              <label className="block text-sm font-medium font-bold">Contact No</label>
               <input
                 type="text"
                 name="contactNo"
@@ -176,8 +178,10 @@ const Records: React.FC = () => {
                 <tr>
                   <th className="px-6 py-4">ID</th>
                   <th className="px-6 py-4">Date</th>
+                  <th className="px-6 py-4">Time</th>
                   <th className="px-6 py-4">Customer Name</th>
                   <th className="px-6 py-4">Contact No</th>
+                  <th className="px-6 py-4">Items (Qty & Size)</th>
                   <th className="px-6 py-4">Payment Summary</th>
                   <th className="px-6 py-4">Notes</th>
                   <th className="px-6 py-4 text-right">Total Amount</th>
@@ -187,17 +191,23 @@ const Records: React.FC = () => {
                 {records.length > 0 ? (
                   records.map(record => (
                     <tr key={record.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4">#{record.id}</td>
-                      <td className="px-6 py-4">{record.date}</td>
-                      <td className="px-6 py-4">{record.customer_name || 'N/A'}</td>
-                      <td className="px-6 py-4">{record.contact_no || 'N/A'}</td>
-                      <td className="px-6 py-4 text-xs space-y-1">
-                        {record.cash_amount > 0 && <div className="text-green-700">Cash: ₹{record.cash_amount}</div>}
-                        {record.card_amount > 0 && <div className="text-blue-700">Card: ₹{record.card_amount}</div>}
-                        {record.upi_amount > 0 && <div className="text-purple-700">UPI: ₹{record.upi_amount}</div>}
-                        {record.credit_amount > 0 && <div className="text-red-600 font-semibold">Credit: ₹{record.credit_amount}</div>}
+                      <td className="px-6 py-4 font-bold">{record.id}</td>
+                      <td className="px-6 py-4 font-bold">{record.date}</td>
+                      <td className="px-6 py-4 font-bold whitespace-nowrap">
+                        {record.created_at ? new Date(record.created_at + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
                       </td>
-                      <td className="px-6 py-4 max-w-[200px] truncate" title={record.notes}>
+                      <td className="px-6 py-4 font-bold">{record.customer_name || 'N/A'}</td>
+                      <td className="px-6 py-4 font-bold">{record.contact_no || 'N/A'}</td>
+                      <td className="px-6 py-4 max-w-[200px] truncate text-sm font-medium" title={record.items_summary}>
+                        {record.items_summary || '-'}
+                      </td>
+                      <td className="px-6 py-4 text-xs space-y-1">
+                        {record.cash_amount > 0 && <div className="text-green-700 font-bold">Cash: ₹{record.cash_amount}</div>}
+                        {record.card_amount > 0 && <div className="text-blue-700 font-bold">Card: ₹{record.card_amount}</div>}
+                        {record.upi_amount > 0 && <div className="text-purple-700 font-bold">UPI: ₹{record.upi_amount}</div>}
+                        {record.credit_amount > 0 && <div className="text-red-600 font-bold">Credit: ₹{record.credit_amount}</div>}
+                      </td>
+                      <td className="px-6 py-4 max-w-[200px] truncate font-bold" title={record.notes}>
                         {record.notes || '-'}
                       </td>
                       <td className="px-6 py-4 text-right font-medium text-gray-900">
@@ -207,7 +217,7 @@ const Records: React.FC = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-gray-400 italic">
+                    <td colSpan={8} className="px-6 py-8 text-center text-gray-400 italic">
                       No records found
                     </td>
                   </tr>
