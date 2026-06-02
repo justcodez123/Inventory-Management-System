@@ -1,17 +1,17 @@
-import React from 'react';
-import './styles/Navbar.css';
+import React from 'react'
+import './styles/Navbar.css'
 
 /* Wholesalers, Records, and other features can be added late */
-export type NavOption = 'Billing' | 'Records';
+export type NavOption = 'Billing' | 'Records'
 
 interface NavbarProps {
-  activeTab: NavOption;
-  onTabChange: (tab: NavOption) => void;
+  activeTab: NavOption
+  onTabChange: (tab: NavOption) => void
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
   // Define the navigation options
-  const options: NavOption[] = ['Billing', 'Records'];
+  const options: NavOption[] = ['Billing', 'Records']
 
   return (
     <nav className="navbar-container">
@@ -34,5 +34,5 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
         ))}
       </ul>
     </nav>
-  );
-};
+  )
+}

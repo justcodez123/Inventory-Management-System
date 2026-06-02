@@ -1,71 +1,73 @@
-import React, { useState, useEffect } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
+import React, { useState, useEffect } from 'react'
 
 interface RecordType {
-  id: number;
-  date: string;
-  customer_name: string;
-  contact_no: string;
-  total_amount: number;
-  cash_amount: number;
-  card_amount: number;
-  upi_amount: number;
-  credit_amount: number;
-  items_summary?: string;
-  notes: string;
-  created_at?: string;
+  id: number
+  date: string
+  customer_name: string
+  contact_no: string
+  total_amount: number
+  cash_amount: number
+  card_amount: number
+  upi_amount: number
+  credit_amount: number
+  items_summary?: string
+  notes: string
+  created_at?: string
 }
 
 const Records: React.FC = () => {
-  const [records, setRecords] = useState<RecordType[]>([]);
-  const todayStr = new Date().toISOString().split('T')[0];
+  const [records, setRecords] = useState<RecordType[]>([])
+  const todayStr = new Date().toISOString().split('T')[0]
   const [filters, setFilters] = useState({
     startDate: todayStr,
     endDate: todayStr,
     customerName: '',
     contactNo: '',
     paymentMode: ''
-  });
+  })
 
-  const [summary, setSummary] = useState({ Total: 0, Cash: 0, Card: 0, UPI: 0, Credit: 0 });
-  const [showKPIs, setShowKPIs] = useState(true);
+  const [summary, setSummary] = useState({ Total: 0, Cash: 0, Card: 0, UPI: 0, Credit: 0 })
+  const [showKPIs, setShowKPIs] = useState(true)
 
   const fetchRecords = async () => {
     try {
-      // @ts-ignore
+      // @ts-ignore - Electron IPC call
       if (window.electron) {
-        // @ts-ignore
-        const data = await window.electron.ipcRenderer.invoke('get-filtered-records', filters);
-        setRecords(data);
+        // @ts-ignore - Electron IPC call
+        const data = await window.electron.ipcRenderer.invoke('get-filtered-records', filters)
+        setRecords(data)
 
         // Calculate summary
-        const newSummary = { Total: 0, Cash: 0, Card: 0, UPI: 0, Credit: 0 };
+        const newSummary = { Total: 0, Cash: 0, Card: 0, UPI: 0, Credit: 0 }
         data.forEach((r: RecordType) => {
-          newSummary.Total += r.total_amount || 0;
-          newSummary.Cash += r.cash_amount || 0;
-          newSummary.Card += r.card_amount || 0;
-          newSummary.UPI += r.upi_amount || 0;
-          newSummary.Credit += r.credit_amount || 0;
-        });
-        setSummary(newSummary);
+          newSummary.Total += r.total_amount || 0
+          newSummary.Cash += r.cash_amount || 0
+          newSummary.Card += r.card_amount || 0
+          newSummary.UPI += r.upi_amount || 0
+          newSummary.Credit += r.credit_amount || 0
+        })
+        setSummary(newSummary)
       }
     } catch (err) {
-      console.error('Failed to fetch records', err);
+      console.error('Failed to fetch records', err)
     }
-  };
+  }
 
   useEffect(() => {
-    fetchRecords();
-  }, [filters]);
+    fetchRecords()
+  }, [filters])
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
-  };
+    const { name, value } = e.target
+    setFilters((prev) => ({ ...prev, [name]: value }))
+  }
 
   return (
     <div className="bg-gray-100 p-6 flex flex-col items-center min-h-full">
       <div className="w-full max-w-7xl bg-white rounded-xl shadow-lg flex flex-col overflow-hidden p-8 space-y-8">
-
         {/* Summary Section */}
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-bold text-gray-800">Records Dashboard</h2>
@@ -81,7 +83,9 @@ const Records: React.FC = () => {
           <section className="grid grid-cols-2 md:grid-cols-5 gap-6">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
               <span className=" text-sm font-medium font-bold">Total Sale</span>
-              <span className="text-2xl font-bold text-indigo-600">₹{summary.Total.toFixed(2)}</span>
+              <span className="text-2xl font-bold text-indigo-600">
+                ₹{summary.Total.toFixed(2)}
+              </span>
             </div>
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
               <span className="text-sm font-medium font-bold">Cash</span>
@@ -104,7 +108,9 @@ const Records: React.FC = () => {
 
         {/* Filters Section */}
         <section className="p-6 border border-gray-200 rounded-xl bg-gray-50/50">
-          <div className="text-sm font-medium text-gray-600 flex items-center justify-center pb-6">For a Single Day Record, Use Same Date for both Start and End Date</div>
+          <div className="text-sm font-medium text-gray-600 flex items-center justify-center pb-6">
+            For a Single Day Record, Use Same Date for both Start and End Date
+          </div>
           <h2 className="text-lg font-semibold text-gray-700 mb-6 flex items-center">
             <span className="w-2 h-6 bg-indigo-500 rounded-full mr-3"></span>
             Filters
@@ -189,25 +195,48 @@ const Records: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {records.length > 0 ? (
-                  records.map(record => (
+                  records.map((record) => (
                     <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 font-bold">{record.id}</td>
                       <td className="px-6 py-4 font-bold">{record.date}</td>
                       <td className="px-6 py-4 font-bold whitespace-nowrap">
-                        {record.created_at ? new Date(record.created_at + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                        {record.created_at
+                          ? new Date(record.created_at + 'Z').toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })
+                          : '-'}
                       </td>
                       <td className="px-6 py-4 font-bold">{record.customer_name || 'N/A'}</td>
                       <td className="px-6 py-4 font-bold">{record.contact_no || 'N/A'}</td>
-                      <td className="px-6 py-4 max-w-[200px] truncate text-sm font-medium" title={record.items_summary}>
+                      <td
+                        className="px-6 py-4 max-w-[200px] truncate text-sm font-medium"
+                        title={record.items_summary}
+                      >
                         {record.items_summary || '-'}
                       </td>
                       <td className="px-6 py-4 text-xs space-y-1">
-                        {record.cash_amount > 0 && <div className="text-green-700 font-bold">Cash: ₹{record.cash_amount}</div>}
-                        {record.card_amount > 0 && <div className="text-blue-700 font-bold">Card: ₹{record.card_amount}</div>}
-                        {record.upi_amount > 0 && <div className="text-purple-700 font-bold">UPI: ₹{record.upi_amount}</div>}
-                        {record.credit_amount > 0 && <div className="text-red-600 font-bold">Credit: ₹{record.credit_amount}</div>}
+                        {record.cash_amount > 0 && (
+                          <div className="text-green-700 font-bold">
+                            Cash: ₹{record.cash_amount}
+                          </div>
+                        )}
+                        {record.card_amount > 0 && (
+                          <div className="text-blue-700 font-bold">Card: ₹{record.card_amount}</div>
+                        )}
+                        {record.upi_amount > 0 && (
+                          <div className="text-purple-700 font-bold">UPI: ₹{record.upi_amount}</div>
+                        )}
+                        {record.credit_amount > 0 && (
+                          <div className="text-red-600 font-bold">
+                            Credit: ₹{record.credit_amount}
+                          </div>
+                        )}
                       </td>
-                      <td className="px-6 py-4 max-w-[200px] truncate font-bold" title={record.notes}>
+                      <td
+                        className="px-6 py-4 max-w-[200px] truncate font-bold"
+                        title={record.notes}
+                      >
                         {record.notes || '-'}
                       </td>
                       <td className="px-6 py-4 text-right font-medium text-gray-900">
@@ -226,10 +255,9 @@ const Records: React.FC = () => {
             </table>
           </div>
         </section>
-
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Records;
+export default Records

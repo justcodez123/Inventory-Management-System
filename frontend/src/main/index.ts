@@ -8,11 +8,11 @@ import * as XLSX from 'xlsx'
 import os from 'os'
 
 // Database initialization
-let db: Database.Database;
+let db: Database.Database
 
 function initDb() {
-  const dbPath = join(app.getPath('userData'), 'inventory.db');
-  db = new Database(dbPath);
+  const dbPath = join(app.getPath('userData'), 'inventory.db')
+  db = new Database(dbPath)
   db.exec(`
     CREATE TABLE IF NOT EXISTS consumer_sales_transactions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,20 +23,20 @@ function initDb() {
       total_amount REAL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
-  `);
+  `)
 
   try {
-    db.exec("ALTER TABLE consumer_sales_transactions ADD COLUMN notes TEXT");
-    db.exec("ALTER TABLE consumer_sales_transactions ADD COLUMN cash_amount REAL DEFAULT 0");
-    db.exec("ALTER TABLE consumer_sales_transactions ADD COLUMN card_amount REAL DEFAULT 0");
-    db.exec("ALTER TABLE consumer_sales_transactions ADD COLUMN upi_amount REAL DEFAULT 0");
-    db.exec("ALTER TABLE consumer_sales_transactions ADD COLUMN credit_amount REAL DEFAULT 0");
+    db.exec('ALTER TABLE consumer_sales_transactions ADD COLUMN notes TEXT')
+    db.exec('ALTER TABLE consumer_sales_transactions ADD COLUMN cash_amount REAL DEFAULT 0')
+    db.exec('ALTER TABLE consumer_sales_transactions ADD COLUMN card_amount REAL DEFAULT 0')
+    db.exec('ALTER TABLE consumer_sales_transactions ADD COLUMN upi_amount REAL DEFAULT 0')
+    db.exec('ALTER TABLE consumer_sales_transactions ADD COLUMN credit_amount REAL DEFAULT 0')
   } catch {
     // Columns already exist
   }
 
   try {
-    db.exec("ALTER TABLE consumer_sales_transactions ADD COLUMN items_summary TEXT");
+    db.exec('ALTER TABLE consumer_sales_transactions ADD COLUMN items_summary TEXT')
   } catch {
     // Column already exists
   }
@@ -45,12 +45,12 @@ function initDb() {
 // Excel backup initialization
 function backupToExcel(record: any) {
   try {
-    const documentsPath = join(os.homedir(), 'Documents');
-    const excelPath = join(documentsPath, 'Consumer_Sales_Transactions.xlsx');
-    
-    let workbook: XLSX.WorkBook;
-    let worksheet: XLSX.WorkSheet;
-    const sheetName = 'Consumer Sales Transactions';
+    const documentsPath = join(os.homedir(), 'Documents')
+    const excelPath = join(documentsPath, 'Consumer_Sales_Transactions.xlsx')
+
+    let workbook: XLSX.WorkBook
+    let worksheet: XLSX.WorkSheet
+    const sheetName = 'Consumer Sales Transactions'
 
     const newRow = {
       Date: record.date,
@@ -63,46 +63,46 @@ function backupToExcel(record: any) {
       Credit: record.credit_amount || 0,
       'Items Summary': record.items_summary || '',
       Notes: record.notes || ''
-    };
+    }
 
     if (existsSync(excelPath)) {
-      workbook = XLSX.readFile(excelPath);
-      worksheet = workbook.Sheets[sheetName];
+      workbook = XLSX.readFile(excelPath)
+      worksheet = workbook.Sheets[sheetName]
       if (!worksheet) {
-        worksheet = XLSX.utils.json_to_sheet([newRow]);
-        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+        worksheet = XLSX.utils.json_to_sheet([newRow])
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
       } else {
-        XLSX.utils.sheet_add_json(worksheet, [newRow], { skipHeader: true, origin: -1 });
+        XLSX.utils.sheet_add_json(worksheet, [newRow], { skipHeader: true, origin: -1 })
       }
     } else {
-      workbook = XLSX.utils.book_new();
-      worksheet = XLSX.utils.json_to_sheet([newRow]);
-      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+      workbook = XLSX.utils.book_new()
+      worksheet = XLSX.utils.json_to_sheet([newRow])
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
     }
-    XLSX.writeFile(workbook, excelPath);
+    XLSX.writeFile(workbook, excelPath)
   } catch (error) {
-    console.error('Failed to backup to Excel:', error);
+    console.error('Failed to backup to Excel:', error)
   }
 }
 
-
 function createWindow(): void {
-
-  autoUpdater.checkForUpdatesAndNotify();
+  autoUpdater.checkForUpdatesAndNotify()
 
   autoUpdater.on('update-downloaded', () => {
-    dialog.showMessageBox({
-      type: 'info',
-      title: 'Update Ready',
-      message: 'A new version has been downloaded. Restart the application to apply the updates.',
-      buttons: ['Restart Now', 'Later']
-    }).then((result) => {
-      if (result.response === 0) {
-        // User clicked "Restart Now"
-        autoUpdater.quitAndInstall();
-      }
-    });
-  }); 
+    dialog
+      .showMessageBox({
+        type: 'info',
+        title: 'Update Ready',
+        message: 'A new version has been downloaded. Restart the application to apply the updates.',
+        buttons: ['Restart Now', 'Later']
+      })
+      .then((result) => {
+        if (result.response === 0) {
+          // User clicked "Restart Now"
+          autoUpdater.quitAndInstall()
+        }
+      })
+  })
 
   autoUpdater.on('error', (error) => {
     console.error('Update failed:', error)
@@ -143,7 +143,7 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
-  initDb();
+  initDb()
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
@@ -157,10 +157,10 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
-  // Save Bill to PDF 
+  // Save Bill to PDF
   ipcMain.on('save-bill-pdf', async (event, defaultFilename) => {
     const webContents = event.sender
-    
+
     try {
       // Prompt user for save location
       const { filePath } = await dialog.showSaveDialog({
@@ -175,7 +175,7 @@ app.whenReady().then(() => {
           printBackground: true,
           pageRanges: '1-1'
         })
-        
+
         writeFileSync(filePath, pdfData)
         // Optionally send a success message back
         webContents.send('save-pdf-success', filePath)
@@ -189,8 +189,8 @@ app.whenReady().then(() => {
 
   // Show Message Box
   ipcMain.handle('show-message-box', async (_event, options) => {
-    return await dialog.showMessageBox(options);
-  });
+    return await dialog.showMessageBox(options)
+  })
 
   // Check Duplicate Transaction
   ipcMain.handle('check-duplicate-transaction', (_event, record) => {
@@ -201,19 +201,19 @@ app.whenReady().then(() => {
         AND customer_name = @customer_name 
         AND total_amount = @total_amount 
         AND items_summary = @items_summary
-      `);
+      `)
       const result = stmt.get({
         date: record.date,
         customer_name: record.customer_name,
         total_amount: record.total_amount,
         items_summary: record.items_summary
-      }) as { count: number };
-      return result.count > 0;
+      }) as { count: number }
+      return result.count > 0
     } catch (error) {
-      console.error('Failed to check duplicate:', error);
-      return false; // If it fails, default to false so we don't block them forever
+      console.error('Failed to check duplicate:', error)
+      return false // If it fails, default to false so we don't block them forever
     }
-  });
+  })
 
   // Submit Transaction
   ipcMain.handle('submit-transaction', async (_event, record) => {
@@ -222,23 +222,25 @@ app.whenReady().then(() => {
         INSERT INTO consumer_sales_transactions 
         (date, customer_name, contact_no, total_amount, cash_amount, card_amount, upi_amount, credit_amount, notes, items_summary)
         VALUES (@date, @customer_name, @contact_no, @total_amount, @cash_amount, @card_amount, @upi_amount, @credit_amount, @notes, @items_summary)
-      `);
-      stmt.run(record);
-      
+      `)
+      stmt.run(record)
+
       // Run backup asynchronously so it doesn't block UI
-      setTimeout(() => backupToExcel(record), 0);
-      return { success: true };
+      setTimeout(() => backupToExcel(record), 0)
+      return { success: true }
     } catch (error) {
-      console.error('Database insert error:', error);
-      return { success: false, error: String(error) };
+      console.error('Database insert error:', error)
+      return { success: false, error: String(error) }
     }
-  });
+  })
 
   // Get Daily Totals
   ipcMain.handle('get-daily-totals', async (_event, dateStr) => {
     try {
       // dateStr is 'YYYY-MM-DD'
-      const row = db.prepare(`
+      const row = db
+        .prepare(
+          `
         SELECT SUM(total_amount) as totalAmount,
                SUM(cash_amount) as totalCash,
                SUM(card_amount) as totalCard,
@@ -246,7 +248,9 @@ app.whenReady().then(() => {
                SUM(credit_amount) as totalCredit
         FROM consumer_sales_transactions
         WHERE date = ?
-      `).get(dateStr) as any;
+      `
+        )
+        .get(dateStr) as any
 
       return {
         Total: row?.totalAmount || 0,
@@ -254,34 +258,34 @@ app.whenReady().then(() => {
         Card: row?.totalCard || 0,
         UPI: row?.totalUPI || 0,
         Credit: row?.totalCredit || 0
-      };
+      }
     } catch (error) {
-      console.error('Failed to get daily totals:', error);
-      return { Total: 0, Cash: 0, Card: 0, UPI: 0, Credit: 0 };
+      console.error('Failed to get daily totals:', error)
+      return { Total: 0, Cash: 0, Card: 0, UPI: 0, Credit: 0 }
     }
-  });
+  })
 
   // Get Filtered Records
   ipcMain.handle('get-filtered-records', async (_event, filters) => {
     try {
-      let query = 'SELECT * FROM consumer_sales_transactions WHERE 1=1';
-      const params: any[] = [];
+      let query = 'SELECT * FROM consumer_sales_transactions WHERE 1=1'
+      const params: any[] = []
 
       if (filters.startDate) {
-        query += ' AND date >= ?';
-        params.push(filters.startDate);
+        query += ' AND date >= ?'
+        params.push(filters.startDate)
       }
       if (filters.endDate) {
-        query += ' AND date <= ?';
-        params.push(filters.endDate);
+        query += ' AND date <= ?'
+        params.push(filters.endDate)
       }
       if (filters.customerName) {
-        query += ' AND customer_name LIKE ?';
-        params.push(`%${filters.customerName}%`);
+        query += ' AND customer_name LIKE ?'
+        params.push(`%${filters.customerName}%`)
       }
       if (filters.contactNo) {
-        query += ' AND contact_no LIKE ?';
-        params.push(`%${filters.contactNo}%`);
+        query += ' AND contact_no LIKE ?'
+        params.push(`%${filters.contactNo}%`)
       }
       // if (filters.paymentMode) {
       //   // Since we dropped overall paymentMode, filtering by it requires checking the amounts
@@ -291,16 +295,15 @@ app.whenReady().then(() => {
       //   else if (filters.paymentMode === 'On Credit') query += ' AND credit_amount > 0';
       // }
 
-      query += ' ORDER BY date DESC, id DESC';
-      
-      const records = db.prepare(query).all(params);
-      return records;
-    } catch (error) {
-      console.error('Failed to get records:', error);
-      return [];
-    }
-  });
+      query += ' ORDER BY date DESC, id DESC'
 
+      const records = db.prepare(query).all(params)
+      return records
+    } catch (error) {
+      console.error('Failed to get records:', error)
+      return []
+    }
+  })
 
   createWindow()
 
