@@ -41,3 +41,5 @@ npmRebuild: false
 publish:
   provider: github
   releaseType: release
+  owner: justcodez123
+  repo: Inventory-Management-System
