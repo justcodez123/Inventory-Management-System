@@ -39,7 +39,7 @@ appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
 publish:
-  provider: github
-  releaseType: release
-  owner: justcodez123
-  repo: Inventory-Management-System
+  - provider: github
+    releaseType: release
+    owner: justcodez123
+    repo: Inventory-Management-System
