@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Entries, { EntryRow } from '../components/Entries'
 import Billing from '../components/Billing'
 //import { Navbar, NavOption } from '../components/Navbar';
@@ -27,6 +27,13 @@ const ConsumerBilling: React.FC = () => {
 
   // State for Payment Details
   const [paymentDetails, setPaymentDetails] = useState({ modeOfPayment: '', note: '' })
+
+  // State to hold the submitted bill so it stays visible on the right
+  const [submittedBill, setSubmittedBill] = useState<{
+    customer: CustomerDetails
+    entries: EntryRow[]
+    paymentDetails: { modeOfPayment: string; note: string }
+  } | null>(null)
 
   const DEFAULT_PRODUCTS = ['Tshirt', 'Jeans', 'Sando', 'Trousers', 'Shirt', 'Shorts', 'Jacket']
 
@@ -64,6 +71,16 @@ const ConsumerBilling: React.FC = () => {
       [name]: value
     }))
   }
+
+  // Auto-dismiss submitted bill when user starts a new entry
+  useEffect(() => {
+    if (submittedBill) {
+      const hasEntries = entries.some((r) => r.product || r.qty || r.rate || r.amount || r.size)
+      if (hasEntries || customer.name || customer.contactNo) {
+        setSubmittedBill(null)
+      }
+    }
+  }, [entries, customer, submittedBill])
 
   //   const formatToNormalDate = (dateString: string) =>{
   //     if(!dateString) return '';
@@ -203,6 +220,9 @@ const ConsumerBilling: React.FC = () => {
             // @ts-ignore - Electron IPC call
             window.electron.ipcRenderer.send('save-bill-pdf', defaultFilename)
           }
+
+          // Capture the bill to keep it displayed
+          setSubmittedBill({ customer, entries, paymentDetails })
 
           // Clear form after successful submit
           setCustomer({ name: '', contactNo: '', date: new Date().toISOString().split('T')[0] })
@@ -350,7 +370,12 @@ const ConsumerBilling: React.FC = () => {
               onSubmit={handleTransactionSubmit}
             />
 
-            <Billing customer={customer} entries={entries} paymentDetails={paymentDetails} />
+            <Billing 
+              customer={submittedBill ? submittedBill.customer : customer} 
+              entries={submittedBill ? submittedBill.entries : entries} 
+              paymentDetails={submittedBill ? submittedBill.paymentDetails : paymentDetails} 
+              onSend={() => setSubmittedBill(null)}
+            />
           </div>
         </main>
 

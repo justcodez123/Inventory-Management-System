@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react'
 import './styles/Entries.css'
-import { AddMoreModal } from './Modals/AddMore'
 
 export interface EntryRow {
   id: string
@@ -84,6 +83,35 @@ const Entries: React.FC<EntriesProps> = ({
     setRows((prev) => prev.filter((row) => row.id !== id))
   }
 
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      
+      const target = e.currentTarget
+      const focusableInputs = Array.from(
+        document.querySelectorAll<HTMLInputElement>('.entries-table .entries-input')
+      ).filter((el) => !el.disabled)
+      
+      const index = focusableInputs.indexOf(target)
+      
+      if (index > -1) {
+        if (index < focusableInputs.length - 1) {
+          focusableInputs[index + 1].focus()
+        } else {
+          handleAddRow()
+          setTimeout(() => {
+            const updatedInputs = Array.from(
+              document.querySelectorAll<HTMLInputElement>('.entries-table .entries-input')
+            ).filter((el) => !el.disabled)
+            if (updatedInputs.length > focusableInputs.length) {
+              updatedInputs[focusableInputs.length].focus()
+            }
+          }, 0)
+        }
+      }
+    }
+  }
+
   // const handleSubmit = () => {
   //   if (window.confirm('Do you want to submit an application?')) {
   //     console.log('Submitted Entries:', rows);
@@ -108,52 +136,24 @@ const Entries: React.FC<EntriesProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-6 mt-2 sm:mt-0">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-bold text-gray-700 whitespace-nowrap">
-              Mode of Payment <span className="text-red-500">*</span>
-            </label>
-            <select
-              className="entries-select !py-1 !px-2"
-              value={paymentDetails.modeOfPayment}
-              onChange={(e) =>
-                setPaymentDetails((prev) => ({ ...prev, modeOfPayment: e.target.value }))
-              }
-              required
-            >
-              <option value="" disabled>
-                Select
-              </option>
-              {PaymentModes.map((mode) => (
-                <option key={mode} value={mode}>
-                  {mode}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-bold text-gray-700 whitespace-nowrap">
-              Note{' '}
-              {paymentDetails.modeOfPayment === 'On Credit' && (
-                <span className="text-red-500">*</span>
-              )}
-            </label>
-            <input
-              type="text"
-              className="entries-input !py-1 !px-2 w-48"
-              placeholder="Note..."
-              value={paymentDetails.note}
-              onChange={(e) => setPaymentDetails((prev) => ({ ...prev, note: e.target.value }))}
-            />
-          </div>
+          
         </div>
       </div>
 
       <div className="entries-table-wrapper">
+        <datalist id="product-options">
+          {availableProducts.map((prod) => (
+            <option key={prod} value={prod} />
+          ))}
+        </datalist>
         <table className="entries-table">
           <thead className="entries-thead">
             <tr>
               <th style={{ fontWeight: 'bold' }}>
                 Product <span className="text-red-500">*</span>
+              </th>
+              <th style={{ fontWeight: 'bold' }}>
+                Size <span className="text-red-500">*</span>
               </th>
               <th style={{ fontWeight: 'bold' }}>
                 Qty <span className="text-red-500">*</span>
@@ -162,9 +162,6 @@ const Entries: React.FC<EntriesProps> = ({
                 Rate <span className="text-red-500">*</span>
               </th>
               <th style={{ fontWeight: 'bold' }}>Amount</th>
-              <th style={{ fontWeight: 'bold' }}>
-                Size <span className="text-red-500">*</span>
-              </th>
             </tr>
           </thead>
 
@@ -172,36 +169,34 @@ const Entries: React.FC<EntriesProps> = ({
             {rows.map((row) => (
               <tr key={row.id} className="entries-row">
                 <td className="entries-cell">
-                  <select
-                    className="entries-select"
+                  <input
+                    list="product-options"
+                    className="entries-input"
                     value={row.product}
                     onChange={(e) => handleRowChange(row.id, 'product', e.target.value)}
+                    onBlur={(e) => {
+                      if (e.target.value && !availableProducts.includes(e.target.value)) {
+                        onAddProduct(e.target.value)
+                      }
+                    }}
+                    onKeyDown={handleInputKeyDown}
+                    placeholder="Select or type product"
                     required
-                  >
-                    <option value="" disabled>
-                      Select Product
-                    </option>
-                    {availableProducts.map((prod) => (
-                      <option key={prod} value={prod}>
-                        {prod}
-                      </option>
-                    ))}
-                    <option value="Add More">Add More...</option>
-                  </select>
-
-                  {row.product === 'Add More' && (
-                    <AddMoreModal
-                      existingProducts={availableProducts}
-                      onAdd={(newProduct) => {
-                        onAddProduct(newProduct)
-                        handleRowChange(row.id, 'product', newProduct)
-                      }}
-                      onClose={() => {
-                        handleRowChange(row.id, 'product', '')
-                      }}
-                    />
-                  )}
+                  />
                 </td>
+                
+                <td className="entries-cell">
+                  <input
+                    type="text"
+                    className="entries-input"
+                    placeholder="Size"
+                    value={row.size || ''}
+                    required
+                    onChange={(e) => handleRowChange(row.id, 'size', e.target.value)}
+                    onKeyDown={handleInputKeyDown}
+                  />
+                </td>
+
                 <td className="entries-cell">
                   <input
                     type="number"
@@ -213,8 +208,10 @@ const Entries: React.FC<EntriesProps> = ({
                     onChange={(e) =>
                       handleRowChange(row.id, 'qty', e.target.value ? Number(e.target.value) : '')
                     }
+                    onKeyDown={handleInputKeyDown}
                   />
                 </td>
+
                 <td className="entries-cell">
                   <input
                     min="0"
@@ -225,25 +222,20 @@ const Entries: React.FC<EntriesProps> = ({
                     onChange={(e) =>
                       handleRowChange(row.id, 'rate', e.target.value ? Number(e.target.value) : '')
                     }
+                    onKeyDown={handleInputKeyDown}
                   />
                 </td>
+                
                 <td className="entries-cell">
                   <input
                     min="0"
                     className="entries-input"
                     placeholder="0.00"
                     value={row.amount}
-                    readOnly
-                  />
-                </td>
-                <td className="entries-cell">
-                  <input
-                    type="text"
-                    className="entries-input"
-                    placeholder="Size"
-                    value={row.size || ''}
-                    required
-                    onChange={(e) => handleRowChange(row.id, 'size', e.target.value)}
+                    onChange={(e) =>
+                      handleRowChange(row.id, 'amount', e.target.value ? Number(e.target.value) : '')
+                    }
+                    onKeyDown={handleInputKeyDown}
                   />
                 </td>
 
@@ -272,14 +264,56 @@ const Entries: React.FC<EntriesProps> = ({
                 </td>
               </tr>
             ))}
+
           </tbody>
         </table>
       </div>
 
-      <div className="entries-actions" style={{ display: 'flex', gap: '16px' }}>
+      <div className="entries-actions" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
         <button className="entries-submit-btn" onClick={handleAddRow}>
           Add
         </button>
+
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-bold text-gray-700 whitespace-nowrap">
+            Mode of Payment <span className="text-red-500">*</span>
+          </label>
+          <select
+            className="entries-select !py-1 !px-2"
+            value={paymentDetails.modeOfPayment}
+            onChange={(e) =>
+              setPaymentDetails((prev) => ({ ...prev, modeOfPayment: e.target.value }))
+            }
+            required
+            style={{ width: 'auto', minWidth: '150px' }}
+          >
+            <option value="" disabled>
+              Select
+            </option>
+            {PaymentModes.map((mode) => (
+              <option key={mode} value={mode}>
+                {mode}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+            <label className="text-sm font-bold text-gray-700 whitespace-nowrap">
+              Note{' '}
+              {paymentDetails.modeOfPayment === 'On Credit' && (
+                <span className="text-red-500">*</span>
+              )}
+            </label>
+            <input
+              type="text"
+              className="entries-input !py-1 !px-2 w-48"
+              placeholder="Note..."
+              value={paymentDetails.note}
+              onChange={(e) => setPaymentDetails((prev) => ({ ...prev, note: e.target.value }))}
+            />
+        </div>
+
         <button onClick={onSubmit} className="entries-submit-btn">
           Submit
         </button>
