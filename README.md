@@ -5,6 +5,10 @@ An offline-first desktop application built with React and Electron for seamless,
 ### 🚀 Current Features
 *   **Offline-First Architecture**: Operates natively on your desktop without requiring an active internet connection.
 *   **Dynamic Billing Dashboard**: Real-time total calculation with editable product entries, quantities, and rates.
+*   **Rapid Data Entry**: Built-in "Enter-to-Tab" navigation and auto-row creation for lightning-fast keyboard-only input.
+*   **Dynamic Product Selection**: Searchable, writable combobox for product selection that automatically learns and saves new products on the fly.
+*   **Persistent Bill Preview**: Live side-by-side view that keeps the submitted bill visible until it's sent or a new customer is entered.
+*   **WhatsApp Integration**: Share invoices and receipts instantly via WhatsApp directly from the active billing screen or historical records dashboard.
 *   **Native PDF Export**: Directly generates and saves 1-page PDF invoices to the local file system using Electron IPC.
 *   **Modern UI**: Built with React and Tailwind CSS for a highly responsive, clean, and intuitive user experience.
 *   **Local Database & Historical Records**: Automatically logs transactions to a local SQLite database, viewable in a dedicated historical records dashboard with time-stamps and item summaries.

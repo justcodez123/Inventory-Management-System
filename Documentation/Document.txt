@@ -42,3 +42,11 @@ UPDATE: Architecture Pivot (Backend Replacement)
 Based on recent development, the Spring Boot sidecar was dropped in favor of handling data directly within the Electron Main Process. 
 The application now uses `better-sqlite3` native bindings inside the Electron main process to directly interface with an `inventory.db` file located in the user's `userData` folder. This completely eliminates the need for bundling a JRE, managing dynamic ports, and dealing with orphaned child process management, drastically reducing the application bundle size.
 Simultaneously, the main process now also utilizes the `xlsx` module to dynamically maintain an Excel spreadsheet backup in the user's `Documents` folder asynchronously, ensuring robust data redundancy without freezing the React UI.
+
+UPDATE 2: Workflow & UI Optimizations
+To optimize the cashier experience, the frontend has been deeply enhanced with:
+- Lightning-fast "Enter-to-Tab" keyboard navigation inside the Entries table, with automatic new-row creation.
+- A smart, writable Product combobox (using `<datalist>`) that automatically adds new products to the local inventory when typed.
+- A persistent Bill Preview that remains visible on-screen after submission until the user clicks Send or begins a new transaction.
+- Native WhatsApp sharing integrations to send invoices directly to the customer's phone from both the active Billing screen and the historical Records dashboard.
+- Expandable text cells in the Records dashboard for easy viewing of large item summaries.
