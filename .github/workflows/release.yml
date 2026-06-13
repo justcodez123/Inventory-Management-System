@@ -30,13 +30,6 @@ jobs:
         working-directory: ./app
         run: npm install
 
-      - name: Clean up ghost releases
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh api -X DELETE repos/justcodez123/Inventory-Management-System/releases/338978932 --silent || echo "Ghost release cleared"
-          gh release delete v1.1.1 -y || echo "No existing v1.1.1 release"
-
       - name: Build Application & Publish Release
         working-directory: ./app
         env:
