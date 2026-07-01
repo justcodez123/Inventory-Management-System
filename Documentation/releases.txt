@@ -1,0 +1,21 @@
+# GitHub Actions & Electron-Builder Release Troubleshooting
+
+During the deployment of v1.1.1, the GitHub Actions workflow successfully built the application, but the releases were not appearing in the GitHub Releases tab. Here is a log of the problems faced and how they were resolved.
+
+## 1. Subdirectory Context Loss
+**Problem:** The codebase was recently moved to an `app` subdirectory. Because `electron-builder` was executed from inside the `app` folder, it could not automatically locate the `.git` directory at the project root to infer the repository details. This caused it to silently skip the publishing step entirely.
+**Fix:** Explicitly defined the repository `owner` and `repo` in `app/electron-builder.yml`.
+
+## 2. Configuration Formatting & Tokens
+**Problem:** The `publish` block in `electron-builder.yml` was formatted as a standard object, but `electron-builder` requires it to be an array when declaring multiple properties or using a specific provider format. Additionally, GitHub Actions environments occasionally have strict token mapping requirements.
+**Fix:** 
+- Converted the `publish` block to an array format (using `- provider: github`).
+- Explicitly passed both `GH_TOKEN` and `GITHUB_TOKEN` as environment variables in `.github/workflows/release.yml`.
+- Replaced the `-p always` shorthand with `--publish always` to ensure PowerShell correctly interpreted the flag.
+
+## 3. The "Ghost Draft" Hijacking (Root Cause)
+**Problem:** Even after fixing the configuration, the workflow still succeeded without publishing a visible release. Debug logs revealed: `overwrite published file... reason=already exists on GitHub`. 
+Because previous failed attempts (or manual tests) had created a "Draft" release in the repository without a proper tag, this draft became a "ghost release" hidden from the main feed. `electron-builder` has a known quirk where it will hijack the first existing untagged draft release it finds and upload new assets to it instead of creating a brand new published release. Since the ghost draft retained its original creation date, it sat silently buried below older releases.
+**Fix:** 
+- Added a temporary "ghost busting" step in `release.yml` using the GitHub CLI (`gh api -X DELETE ...`) to forcibly delete the hidden draft release ID (`338978932`).
+- Deleted the tag locally and remotely, and re-pushed it. With the slate fully cleaned, `electron-builder` was forced to create a brand new release, successfully flipping it from draft to "Published" status at the top of the feed.
