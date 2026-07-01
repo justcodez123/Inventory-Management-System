@@ -8,6 +8,9 @@ import * as XLSX from 'xlsx'
 import os from 'os'
 
 // Database initialization
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('no-sandbox')
+}
 let db: Database.Database
 
 function initDb() {
@@ -39,6 +42,23 @@ function initDb() {
     db.exec('ALTER TABLE consumer_sales_transactions ADD COLUMN items_summary TEXT')
   } catch {
     // Column already exists
+  }
+
+  // Create users table and insert default users
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL
+    )
+  `)
+
+  try {
+    const insertUser = db.prepare('INSERT OR IGNORE INTO users (username, password) VALUES (?, ?)')
+    insertUser.run('Rushabh', 'XyzRushabh@123')
+    insertUser.run('Aaditya', 'XyzAaditya@123')
+  } catch (error) {
+    console.error('Failed to insert default users', error)
   }
 }
 
@@ -302,6 +322,33 @@ app.whenReady().then(() => {
     } catch (error) {
       console.error('Failed to get records:', error)
       return []
+    }
+  })
+
+  // Delete Record
+  ipcMain.handle('delete-record', async (_event, id) => {
+    try {
+      const stmt = db.prepare('DELETE FROM consumer_sales_transactions WHERE id = ?')
+      const result = stmt.run(id)
+      return { success: result.changes > 0 }
+    } catch (error) {
+      console.error('Failed to delete record:', error)
+      return { success: false, error: String(error) }
+    }
+  })
+
+  // Verify Login
+  ipcMain.handle('verify-login', async (_event, { username, password }) => {
+    try {
+      const stmt = db.prepare('SELECT id FROM users WHERE username = ? AND password = ?')
+      const user = stmt.get(username, password)
+      if (user) {
+        return { success: true }
+      }
+      return { success: false, error: 'Invalid username or password' }
+    } catch (error) {
+      console.error('Login verification failed:', error)
+      return { success: false, error: String(error) }
     }
   })
 

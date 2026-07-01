@@ -88,6 +88,8 @@ const Entries: React.FC<EntriesProps> = ({
       e.preventDefault()
       
       const target = e.currentTarget
+      const field = target.getAttribute('data-field')
+
       const focusableInputs = Array.from(
         document.querySelectorAll<HTMLInputElement>('.entries-table .entries-input')
       ).filter((el) => !el.disabled)
@@ -95,18 +97,36 @@ const Entries: React.FC<EntriesProps> = ({
       const index = focusableInputs.indexOf(target)
       
       if (index > -1) {
-        if (index < focusableInputs.length - 1) {
-          focusableInputs[index + 1].focus()
+        if (field === 'product') {
+          const nextProductIndex = focusableInputs.findIndex((el, i) => i > index && el.getAttribute('data-field') === 'product')
+          if (nextProductIndex > -1) {
+            focusableInputs[nextProductIndex].focus()
+          } else {
+            handleAddRow()
+            setTimeout(() => {
+              const updatedInputs = Array.from(
+                document.querySelectorAll<HTMLInputElement>('.entries-table .entries-input')
+              ).filter((el) => !el.disabled)
+              const newProductIndex = updatedInputs.findIndex((el, i) => i > index && el.getAttribute('data-field') === 'product')
+              if (newProductIndex > -1) {
+                updatedInputs[newProductIndex].focus()
+              }
+            }, 0)
+          }
         } else {
-          handleAddRow()
-          setTimeout(() => {
-            const updatedInputs = Array.from(
-              document.querySelectorAll<HTMLInputElement>('.entries-table .entries-input')
-            ).filter((el) => !el.disabled)
-            if (updatedInputs.length > focusableInputs.length) {
-              updatedInputs[focusableInputs.length].focus()
-            }
-          }, 0)
+          if (index < focusableInputs.length - 1) {
+            focusableInputs[index + 1].focus()
+          } else {
+            handleAddRow()
+            setTimeout(() => {
+              const updatedInputs = Array.from(
+                document.querySelectorAll<HTMLInputElement>('.entries-table .entries-input')
+              ).filter((el) => !el.disabled)
+              if (updatedInputs.length > focusableInputs.length) {
+                updatedInputs[focusableInputs.length].focus()
+              }
+            }, 0)
+          }
         }
       }
     }
@@ -172,6 +192,7 @@ const Entries: React.FC<EntriesProps> = ({
                   <input
                     list="product-options"
                     className="entries-input"
+                    data-field="product"
                     value={row.product}
                     onChange={(e) => handleRowChange(row.id, 'product', e.target.value)}
                     onBlur={(e) => {
