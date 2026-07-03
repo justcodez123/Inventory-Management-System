@@ -1,6 +1,4 @@
 import React from 'react'
-import html2canvas from 'html2canvas'
-import jsPDF from 'jspdf'
 import './styles/Billing.css'
 import { EntryRow } from './Entries'
 
