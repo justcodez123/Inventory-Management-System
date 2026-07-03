@@ -1,5 +1,0 @@
-1. Create a Implementation plan for Backend Database using SQLite
-(As it is a Desktop Application , we should use SQLite as we cannot rely on the user having internet connection)
-
-2. Backend language JavaScript, as its an electron app.
-
