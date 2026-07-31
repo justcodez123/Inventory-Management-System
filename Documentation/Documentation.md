@@ -60,3 +60,9 @@ A dashboard for viewing historical transaction records with filtering capabiliti
 - **SQLite Database**: Manages the `consumer_sales_transactions` table. Upgraded to store specific payment mode amounts, an `items_summary` string (e.g. "2x Shirt (Size: L)"), and a `created_at` timestamp.
 - **Duplicate Detection**: Includes a new `check-duplicate-transaction` IPC handler that queries the database for exact matches (ignoring contact info) to warn users of duplicates.
 - **Excel Backup**: Automatically maintains a localized backup of all transactions in `Documents/Consumer_Sales_Transactions.xlsx` using the `xlsx` library. Ensures the correct generation of headers for new files and appends data seamlessly.
+
+## 8. Known Glitches & Resolutions
+### The `autoFocus` Freezing Glitch
+- **Issue**: The application completely froze when the user attempted to type into the Username input field inside the `LoginModal` (and potentially other modals).
+- **Root Cause**: The application utilizes React 19. Using the native `autoFocus` prop on a controlled `<input>` component (where its value is bound to a frequently updating state via `onChange`) inside a component that re-renders frequently can lead to continuous layout thrashing. The React reconciler repeatedly attempts to re-apply focus on every keystroke, which locks the UI thread and freezes the browser/renderer process.
+- **Resolution**: Removed the `autoFocus` attribute from all modal input fields (`LoginModal.tsx`, `AddMore.tsx`, and `NoteModal.tsx`). Replaced it with a robust combination of `useRef` and `useEffect` to programmatically call `.focus()` exactly **once** when the modal opens. This entirely bypassed the React render cycle's focus management and resolved the freezing issue without losing the auto-focus UX.

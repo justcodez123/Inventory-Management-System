@@ -25,6 +25,7 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "better-sqlite3": "^12.10.0",
+    "dotenv": "^17.4.2",
     "electron-updater": "^6.8.3",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",

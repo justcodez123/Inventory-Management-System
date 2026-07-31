@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import '../styles/AddMore.css'
 
@@ -10,6 +10,13 @@ interface AddMoreModalProps {
 
 export const AddMoreModal: React.FC<AddMoreModalProps> = ({ existingProducts, onAdd, onClose }) => {
   const [inputValue, setInputValue] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [])
 
   const handleSave = () => {
     const trimmed = inputValue.trim()
@@ -29,12 +36,12 @@ export const AddMoreModal: React.FC<AddMoreModalProps> = ({ existingProducts, on
         <div className="add-more-modal-header">
           <h2>Add New Product</h2>
           <input
+            ref={inputRef}
             type="text"
             className="add-more-modal-input"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            autoFocus
           />
 
           <div className="add-more-existing-section">

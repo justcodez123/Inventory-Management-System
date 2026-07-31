@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 
 interface LoginModalProps {
   isOpen: boolean
@@ -11,6 +11,14 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSuccess }) =
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  
+  const usernameInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (isOpen && usernameInputRef.current) {
+      usernameInputRef.current.focus()
+    }
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -58,12 +66,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSuccess }) =
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Username</label>
             <input
+              ref={usernameInputRef}
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-gray-50 focus:bg-white"
               placeholder="Enter username"
-              autoFocus
             />
           </div>
           

@@ -1,0 +1,62 @@
+name: Build and Release Electron App
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install Dependencies
+        working-directory: ./app
+        run: npm ci
+
+      - name: Build for Windows
+        if: matrix.os == 'windows-latest'
+        working-directory: ./app
+        run: npm run build:win
+
+      - name: Build for macOS
+        if: matrix.os == 'macos-latest'
+        working-directory: ./app
+        run: npm run build:mac
+
+      - name: Build for Linux
+        if: matrix.os == 'ubuntu-latest'
+        working-directory: ./app
+        # electron-builder might need some native dependencies on ubuntu for certain formats like snap
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y snapcraft
+          npm run build:linux
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-${{ matrix.os }}
+          path: |
+            app/dist/**/*.exe
+            app/dist/**/*.dmg
+            app/dist/**/*.AppImage
+            app/dist/**/*.snap
+            app/dist/**/*.deb
+          retention-days: 7

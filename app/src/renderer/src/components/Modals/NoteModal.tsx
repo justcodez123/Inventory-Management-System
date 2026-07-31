@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 
 interface NoteModalProps {
   isOpen: boolean
@@ -9,9 +9,13 @@ interface NoteModalProps {
 
 export const NoteModal: React.FC<NoteModalProps> = ({ isOpen, initialNote, onSave, onClose }) => {
   const [noteText, setNoteText] = useState(initialNote)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     setNoteText(initialNote)
+    if (isOpen && textareaRef.current) {
+      textareaRef.current.focus()
+    }
   }, [initialNote, isOpen])
 
   if (!isOpen) return null
@@ -41,11 +45,11 @@ export const NoteModal: React.FC<NoteModalProps> = ({ isOpen, initialNote, onSav
 
         <div className="p-6">
           <textarea
+            ref={textareaRef}
             className="w-full h-32 p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none bg-gray-50 transition-all"
             placeholder="Enter credit details, due date, or any other notes here..."
             value={noteText}
             onChange={(e) => setNoteText(e.target.value)}
-            autoFocus
           ></textarea>
         </div>
 

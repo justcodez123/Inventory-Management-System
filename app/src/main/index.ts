@@ -6,6 +6,7 @@ import { autoUpdater } from 'electron-updater'
 import Database from 'better-sqlite3'
 import * as XLSX from 'xlsx'
 import os from 'os'
+import 'dotenv/config'
 
 // Database initialization
 if (process.platform === 'linux') {
@@ -55,8 +56,14 @@ function initDb() {
 
   try {
     const insertUser = db.prepare('INSERT OR IGNORE INTO users (username, password) VALUES (?, ?)')
-    insertUser.run('Rushabh', 'XyzRushabh@123')
-    insertUser.run('Aaditya', 'XyzAaditya@123')
+    
+    const user1Name = process.env.USER1_NAME 
+    const user1Pass = process.env.USER1_PASSWORD 
+    const user2Name = process.env.USER2_NAME
+    const user2Pass = process.env.USER2_PASSWORD 
+    
+    insertUser.run(user1Name, user1Pass)
+    insertUser.run(user2Name, user2Pass)
   } catch (error) {
     console.error('Failed to insert default users', error)
   }
