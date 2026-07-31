@@ -34,16 +34,22 @@ jobs:
       - name: Build for Windows
         if: matrix.os == 'windows-latest'
         working-directory: ./app
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build:win
 
       # - name: Build for macOS
       #   if: matrix.os == 'macos-latest'
       #   working-directory: ./app
+      #   env:
+      #     GH_TOKEN: Same as above syntax
       #   run: npm run build:mac
 
       # - name: Build for Linux
       #   if: matrix.os == 'ubuntu-latest'
       #   working-directory: ./app
+      #   env:
+      #     GH_TOKEN: Same as above syntax
       #   # electron-builder might need some native dependencies on ubuntu for certain formats like snap
       #   run: |
       #     sudo apt-get update
