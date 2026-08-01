@@ -14,7 +14,9 @@ export const AddMoreModal: React.FC<AddMoreModalProps> = ({ existingProducts, on
 
   useEffect(() => {
     if (inputRef.current) {
-      inputRef.current.focus()
+      setTimeout(() => {
+        inputRef.current?.focus()
+      }, 150)
     }
   }, [])
 

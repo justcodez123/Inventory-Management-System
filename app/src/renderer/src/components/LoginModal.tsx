@@ -16,7 +16,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSuccess }) =
 
   useEffect(() => {
     if (isOpen && usernameInputRef.current) {
-      usernameInputRef.current.focus()
+      setTimeout(() => {
+        usernameInputRef.current?.focus()
+      }, 150)
     }
   }, [isOpen])
 

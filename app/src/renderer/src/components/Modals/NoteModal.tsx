@@ -14,7 +14,9 @@ export const NoteModal: React.FC<NoteModalProps> = ({ isOpen, initialNote, onSav
   useEffect(() => {
     setNoteText(initialNote)
     if (isOpen && textareaRef.current) {
-      textareaRef.current.focus()
+      setTimeout(() => {
+        textareaRef.current?.focus()
+      }, 150)
     }
   }, [initialNote, isOpen])
 
