@@ -36,7 +36,7 @@ jobs:
         working-directory: ./app
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run build:win
+        run: npm run build && npx electron-builder --win --publish always
 
       # - name: Build for macOS
       #   if: matrix.os == 'macos-latest'

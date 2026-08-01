@@ -6,8 +6,8 @@ out/
 *.log
 *.log*
 *.exe
-*.env
-*.env.*
+# *.env
+# *.env.*
 .vscode/
 npm-debug.log*
 yarn-debug.log*
