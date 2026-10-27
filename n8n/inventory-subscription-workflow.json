@@ -1,0 +1,193 @@
+{
+  "name": "Inventory Management - Client Subscriptions Backend",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "app-register",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-register",
+      "name": "Webhook: /app-register",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        240
+      ],
+      "webhookId": "app-register"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO client_subscriptions (\n  machine_id, \n  full_name, \n  business_name, \n  contact_no, \n  registered_at, \n  trial_ends_at, \n  payment_status, \n  current_subscription_price\n)\nVALUES (\n  $1, $2, $3, $4, $5, $6, $7, $8\n)\nON CONFLICT (machine_id) DO UPDATE SET\n  full_name = EXCLUDED.full_name,\n  business_name = EXCLUDED.business_name,\n  contact_no = EXCLUDED.contact_no,\n  updated_at = CURRENT_TIMESTAMP\nRETURNING *;",
+        "additionalFields": {
+          "queryParams": "={{ [ $json.body.machine_id, $json.body.full_name, $json.body.business_name, $json.body.contact_no, $json.body.registered_at, $json.body.trial_ends_at, $json.body.payment_status || 'Trial', $json.body.current_subscription_price || 1000 ] }}"
+        }
+      },
+      "id": "postgres-insert-client",
+      "name": "Postgres: Register Client",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        480,
+        240
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-db",
+          "name": "Local PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Client registered successfully in PostgreSQL', status: $json.payment_status, trial_ends_at: $json.trial_ends_at, current_price: $json.current_subscription_price } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-register-success",
+      "name": "Respond: Register Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        740,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "check-status",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-check-status",
+      "name": "Webhook: /check-status",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        500
+      ],
+      "webhookId": "check-status"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  machine_id, \n  payment_status, \n  current_subscription_price, \n  trial_ends_at, \n  paid_until, \n  tamper_flag\nFROM client_subscriptions \nWHERE machine_id = $1 \nLIMIT 1;",
+        "additionalFields": {
+          "queryParams": "={{ [ $json.body.machine_id ] }}"
+        }
+      },
+      "id": "postgres-query-client",
+      "name": "Postgres: Check Subscription",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        480,
+        500
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "postgres-db",
+          "name": "Local PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if client record was found in PostgreSQL\nconst inputData = $input.first();\n\nif (!inputData || !inputData.json || !inputData.json.machine_id) {\n  return [{\n    json: {\n      registered: false,\n      payment_status: 'Pending',\n      current_subscription_price: 1000,\n      message: 'Machine ID not found in database'\n    }\n  }];\n}\n\nconst row = inputData.json;\n\nreturn [{\n  json: {\n    registered: true,\n    payment_status: row.payment_status || 'Trial',\n    current_subscription_price: Number(row.current_subscription_price) || 1000,\n    trial_ends_at: row.trial_ends_at ? new Date(row.trial_ends_at).toISOString() : null,\n    paid_until: row.paid_until ? new Date(row.paid_until).toISOString() : null,\n    tamper_flag: Boolean(row.tamper_flag)\n  }\n}];"
+      },
+      "id": "code-format-response",
+      "name": "Code: Format Status Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        740,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-status-check",
+      "name": "Respond: Status JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        980,
+        500
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: /app-register": {
+      "main": [
+        [
+          {
+            "node": "Postgres: Register Client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres: Register Client": {
+      "main": [
+        [
+          {
+            "node": "Respond: Register Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: /check-status": {
+      "main": [
+        [
+          {
+            "node": "Postgres: Check Subscription",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres: Check Subscription": {
+      "main": [
+        [
+          {
+            "node": "Code: Format Status Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Format Status Output": {
+      "main": [
+        [
+          {
+            "node": "Respond: Status JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

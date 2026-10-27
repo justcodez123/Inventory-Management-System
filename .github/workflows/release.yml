@@ -1,19 +1,16 @@
-name: Build and Release Electron App
+name: Publish Tagged Release (v*)
 
 on:
   push:
     tags:
-      - 'v*' # Trigger the workflow automatically when you push a tag like v1.0.0
+      - 'v*' # Trigger automatically when a tag like v1.1.4 is pushed
 
 jobs:
   release:
-    # Run on a Windows machine to properly build the .exe installer
+    name: Build & Release on Windows
     runs-on: windows-latest
-    
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
-    # Grant permissions for the GITHUB_TOKEN to create releases
+    # Grant permissions for GITHUB_TOKEN to create and publish releases
     permissions:
       contents: write
 
@@ -25,10 +22,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
 
       - name: Install Dependencies
         working-directory: ./app
-        run: npm install
+        run: npm ci
 
       - name: Build Application & Publish Release
         working-directory: ./app
@@ -39,3 +38,14 @@ jobs:
         run: |
           npm run build
           npx electron-builder --win --publish always
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-windows-tag
+          path: |
+            app/dist/*.exe
+            app/dist/**/*.exe
+            app/dist/*.yml
+          retention-days: 7
+
