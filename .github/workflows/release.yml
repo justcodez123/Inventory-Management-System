@@ -45,7 +45,6 @@ jobs:
           name: app-release-windows-tag
           path: |
             app/dist/*.exe
-            app/dist/**/*.exe
             app/dist/*.yml
           retention-days: 7
 

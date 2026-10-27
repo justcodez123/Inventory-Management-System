@@ -65,7 +65,6 @@ jobs:
           name: app-release-${{ matrix.os }}
           path: |
             app/dist/*.exe
-            app/dist/**/*.exe
             app/dist/*.yml
           retention-days: 7
 
