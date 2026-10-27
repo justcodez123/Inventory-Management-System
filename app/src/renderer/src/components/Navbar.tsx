@@ -4,7 +4,7 @@ import { useSubscription } from '../context/SubscriptionContext'
 import { ThemeToggle } from './ThemeToggle'
 import './styles/Navbar.css'
 
-export type NavOption = 'Billing' | 'Records' | 'Vendors'
+export type NavOption = 'Billing' | 'Records' | 'Vendors' | 'Barcode Inventory'
 
 interface NavbarProps {
   activeTab: NavOption
@@ -21,7 +21,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
   const adminNote = license?.registration?.notes
 
   // Define the navigation options
-  const options: NavOption[] = ['Billing', 'Records', 'Vendors']
+  const options: NavOption[] = ['Billing', 'Records', 'Vendors', 'Barcode Inventory']
 
   return (
     <header className="w-full bg-slate-900 text-white border-b border-slate-800 px-4 sm:px-6 py-2.5 flex flex-col gap-2 z-50">
@@ -62,6 +62,10 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
                 activeTab === option
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
+              } ${
+                option === 'Barcode Inventory'
+                  ? 'filter blur-[0.5px] hover:blur-none opacity-80 hover:opacity-100'
+                  : ''
               }`}
               onClick={() => {
                 onTabChange(option)

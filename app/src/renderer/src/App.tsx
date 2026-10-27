@@ -2,6 +2,7 @@ import { useState } from 'react'
 import ConsumerBilling from './pages/ConsumerDashboard'
 import Records from './pages/Records'
 import Vendors from './pages/Vendors'
+import BarcodeInventory from './pages/BarcodeInventory'
 import { Navbar, NavOption } from './components/Navbar'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { SubscriptionProvider, useSubscription } from './context/SubscriptionContext'
@@ -46,6 +47,9 @@ function AppContent(): React.JSX.Element {
         )}
         {activeTab === 'Records' && <Records onEditRecord={handleEditRecord} />}
         {activeTab === 'Vendors' && <Vendors />}
+        {activeTab === 'Barcode Inventory' && (
+          <BarcodeInventory onBackToBilling={() => setActiveTab('Billing')} />
+        )}
       </div>
 
       <LoginModal
