@@ -182,3 +182,56 @@
 .entries-delete-btn:hover {
   background-color: #fee2e2;
 }
+
+/* Mobile & Touch Devices (iPhone 15+, Xiaomi, Redmi) */
+@media (max-width: 768px) {
+  .entries-container {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .entries-table-wrapper {
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+  }
+
+  .entries-thead th {
+    padding: 0 8px 6px 8px;
+    font-size: 0.78rem;
+  }
+
+  .entries-cell {
+    padding: 4px;
+  }
+
+  .entries-cell:first-child {
+    padding-left: 8px;
+  }
+
+  .entries-cell:last-child {
+    padding-right: 8px;
+  }
+
+  .entries-input,
+  .entries-select {
+    min-width: 90px;
+    padding: 8px 10px;
+    font-size: 16px; /* Prevents auto-zoom on iOS Safari */
+    border-radius: 8px;
+  }
+
+  .entries-actions {
+    flex-direction: column;
+    gap: 0.65rem;
+    align-items: stretch;
+    margin-top: 16px;
+    padding-top: 14px;
+  }
+
+  .entries-add-btn,
+  .entries-submit-btn {
+    width: 100%;
+    min-height: 44px;
+    font-size: 0.95rem;
+  }
+}

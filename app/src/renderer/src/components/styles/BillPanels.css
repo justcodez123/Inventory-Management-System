@@ -1,0 +1,649 @@
+/* Bill Panels & Symmetrical 3-Column Layout */
+.bill-checkout-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  align-items: start;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 0.5rem;
+}
+
+.bill-checkout-grid > * {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@media (min-width: 1060px) {
+  .bill-checkout-grid {
+    grid-template-columns: minmax(190px, 1fr) minmax(300px, 360px) minmax(190px, 1fr);
+  }
+}
+
+.bill-side-panel {
+  padding: 1.15rem;
+  border-radius: 16px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(128, 128, 128, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+html.dark .bill-side-panel {
+  background: #1f1f23 !important;
+  border-color: #3f3f46 !important;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.5) !important;
+}
+
+.bill-side-panel:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.14);
+}
+
+.bill-panel-title {
+  font-size: 1.18rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+  line-height: 1.25;
+  white-space: normal;
+  word-break: break-word;
+}
+
+html.dark .bill-panel-title {
+  color: #ffffff !important;
+}
+
+.bill-panel-sub {
+  font-size: 0.8rem;
+  opacity: 0.85;
+  margin: 0 0 1rem;
+  line-height: 1.35;
+}
+
+html.dark .bill-panel-sub {
+  color: #9ca3af !important;
+}
+
+/* ---------- Customer Profile Card Styles ---------- */
+.profile-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2.2rem 1rem;
+  border: 2px dashed rgba(128, 128, 128, 0.25);
+  border-radius: 12px;
+}
+
+.placeholder-icon {
+  font-size: 2rem;
+  margin-bottom: 0.4rem;
+  opacity: 0.85;
+}
+
+.placeholder-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin: 0 0 0.25rem;
+}
+
+.placeholder-text {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.profile-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2.5rem 1rem;
+  font-size: 0.82rem;
+  opacity: 0.75;
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(99, 102, 241, 0.25);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.profile-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.8rem 0.95rem;
+  border-radius: 10px;
+  background: rgba(128, 128, 128, 0.07);
+  border: 1px solid rgba(128, 128, 128, 0.15);
+}
+
+.stat-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+}
+
+.stat-value-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.stat-value.highlight {
+  color: #4f46e5;
+}
+
+html.dark .stat-value.highlight {
+  color: #a5b4fc;
+}
+
+.stat-value.currency {
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-pill {
+  font-size: 0.7rem;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.stat-pill.past {
+  background: rgba(128, 128, 128, 0.15);
+  opacity: 0.85;
+}
+
+.stat-pill.new {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+}
+
+.stat-pill.spend {
+  background: rgba(99, 102, 241, 0.12);
+  color: #4f46e5;
+}
+
+html.dark .stat-pill.spend {
+  color: #c7d2fe;
+}
+
+.stat-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.stat-badge.clear {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+html.dark .stat-badge.clear {
+  background: rgba(16, 185, 129, 0.25);
+  color: #34d399;
+}
+
+.stat-badge.due {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  animation: pulseAlert 2s infinite ease-in-out;
+}
+
+html.dark .stat-badge.due {
+  background: rgba(239, 68, 68, 0.25);
+  color: #f87171;
+}
+
+@keyframes pulseAlert {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+/* Quick Note Tag Section */
+.preference-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.75rem 0.95rem;
+  border-radius: 10px;
+  background: rgba(128, 128, 128, 0.07);
+  border: 1px solid rgba(128, 128, 128, 0.15);
+}
+
+.pref-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pref-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+}
+
+.pref-edit-btn {
+  background: none;
+  border: none;
+  font-size: 0.72rem;
+  color: #6366f1;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.pref-tag-display {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px dashed rgba(99, 102, 241, 0.35);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pref-tag-display:hover {
+  background: rgba(99, 102, 241, 0.18);
+  border-color: #6366f1;
+}
+
+.pref-tag-icon {
+  font-size: 0.9rem;
+}
+
+.pref-tag-text {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pref-edit-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.pref-input {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  border: 1px solid #6366f1 !important;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.pref-preset-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.pref-preset-pill {
+  font-size: 0.68rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(128, 128, 128, 0.25);
+  background: rgba(128, 128, 128, 0.1);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pref-preset-pill:hover {
+  background: #6366f1;
+  color: #fff;
+  border-color: #6366f1;
+}
+
+.pref-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.2rem;
+}
+
+.pref-save-btn,
+.pref-cancel-btn {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.72rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pref-save-btn {
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+}
+
+.pref-cancel-btn {
+  background: transparent;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+}
+
+/* ---------- Customer QR Code Styles ---------- */
+.qr-mode-switch {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border-radius: 999px;
+  background: rgba(128, 128, 128, 0.15);
+  margin-bottom: 0.75rem;
+}
+
+.qr-mode-switch button {
+  flex: 1;
+  border: none;
+  border-radius: 999px;
+  padding: 0.35rem 0.4rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  transition: background 0.2s ease, color 0.2s ease;
+  white-space: nowrap;
+}
+
+.qr-mode-switch button.active {
+  background: #111827;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+html.dark .qr-mode-switch button.active {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+/* Sub-switch for Take Bill (WhatsApp vs Plain Text) */
+.qr-sub-switch {
+  display: flex;
+  background: rgba(128, 128, 128, 0.1);
+  border-radius: 8px;
+  padding: 2px;
+  margin-bottom: 0.75rem;
+  gap: 2px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.qr-sub-switch button {
+  flex: 1;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+html.dark .qr-sub-switch button {
+  color: #9ca3af;
+}
+
+.qr-sub-switch button.active {
+  background: #ffffff;
+  color: #4f46e5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+html.dark .qr-sub-switch button.active {
+  background: #3b3b47;
+  color: #818cf8;
+}
+
+.qr-display-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem;
+  border-radius: 12px;
+  background: rgba(128, 128, 128, 0.06);
+  border: 1px solid rgba(128, 128, 128, 0.15);
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.qr-image-wrapper {
+  position: relative;
+  background: #ffffff;
+  padding: 0.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 2px solid rgba(99, 102, 241, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 180px;
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+}
+
+.qr-image {
+  display: block;
+  width: 100% !important;
+  height: auto !important;
+  aspect-ratio: 1 / 1 !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+  margin: 0 auto;
+  border-radius: 4px;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
+
+.qr-loading {
+  width: 100%;
+  max-width: 180px;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.upi-amount-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+.upi-amount-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  opacity: 0.8;
+  text-transform: uppercase;
+}
+
+.upi-amount-value {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #4f46e5;
+  font-variant-numeric: tabular-nums;
+}
+
+html.dark .upi-amount-value {
+  color: #a5b4fc;
+}
+
+.qr-caption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  margin-top: 0.65rem;
+  text-align: center;
+}
+
+.qr-scan-icon {
+  font-size: 0.95rem;
+}
+
+.qr-caption-text {
+  font-size: 0.74rem;
+  opacity: 0.85;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.qr-copy-btn {
+  margin-top: 0.65rem;
+  width: 100%;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.08);
+  color: #4f46e5;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.qr-copy-btn:hover {
+  background: rgba(99, 102, 241, 0.18);
+}
+
+html.dark .qr-copy-btn {
+  background: rgba(129, 140, 248, 0.12);
+  color: #a5b4fc;
+  border-color: rgba(129, 140, 248, 0.35);
+}
+
+/* PDF Badge and Direct Download Actions */
+.pdf-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-top: 0.55rem;
+}
+
+html.dark .pdf-badge {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.pdf-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+.pdf-action-btn {
+  width: 100%;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.08);
+  color: #4f46e5;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.pdf-action-btn:hover {
+  background: rgba(99, 102, 241, 0.18);
+  border-color: #4f46e5;
+}
+
+html.dark .pdf-action-btn {
+  background: rgba(129, 140, 248, 0.12);
+  color: #a5b4fc;
+  border-color: rgba(129, 140, 248, 0.35);
+}
+
+.pdf-action-btn.secondary {
+  border-color: rgba(156, 163, 175, 0.35);
+  background: transparent;
+  color: #4b5563;
+}
+
+html.dark .pdf-action-btn.secondary {
+  color: #9ca3af;
+  border-color: rgba(156, 163, 175, 0.25);
+}
+
+.pdf-action-btn.secondary:hover {
+  background: rgba(156, 163, 175, 0.12);
+}
+

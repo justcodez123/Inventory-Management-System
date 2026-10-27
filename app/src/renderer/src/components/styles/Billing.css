@@ -3,12 +3,14 @@
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-  padding: 32px;
+  padding: 20px 18px;
   font-family: 'Courier New', Courier, monospace; /* Receipt style */
   border: 1px solid #e5e7eb;
   position: relative;
-  max-width: 600px;
+  width: 100%;
+  max-width: 380px;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .billing-receipt {
@@ -18,8 +20,8 @@
 .billing-header {
   text-align: center;
   border-bottom: 2px dashed #d1d5db;
-  padding-bottom: 16px;
-  margin-bottom: 24px;
+  padding-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .billing-store-name {

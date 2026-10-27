@@ -1,0 +1,147 @@
+@font-face {
+  font-family: 'Playfair Display';
+  src: url('./assets/fonts/PlayfairDisplay-VariableFont_wght.ttf') format('truetype');
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Playfair Display';
+  src: url('./assets/fonts/PlayfairDisplay-Italic-VariableFont_wght.ttf') format('truetype');
+  font-weight: 400 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Apply Playfair Display to every element */
+*, *::before, *::after, button, input, select, textarea, th, td {
+  font-family: 'Playfair Display', serif !important;
+}
+
+:root {
+  --color-bg-light: #f5f5f5;
+  --color-bg-dark: #1a1a1a;
+  --color-primary: #ffffff;
+  --color-secondary: #000000;
+  --glass-bg-light: rgba(255, 255, 255, 0.2);
+  --glass-bg-dark: rgba(0, 0, 0, 0.2);
+}
+
+html.light {
+  --bg-color: var(--color-bg-light);
+  --text-color: var(--color-secondary);
+  --glass-bg: var(--glass-bg-light);
+}
+
+html.dark {
+  --bg-color: var(--color-bg-dark);
+  --text-color: var(--color-primary);
+  --glass-bg: var(--glass-bg-dark);
+}
+
+body {
+  font-family: 'Playfair Display', serif;
+  background: var(--bg-color);
+  color: var(--text-color);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* Glassmorphism card */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 1rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.glass-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Micro‑animations */
+.fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Theme switch */
+.theme-switch {
+  position: relative;
+  width: 64px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  background: #d1d5db;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: background 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.theme-switch.is-dark {
+  background: #374151;
+}
+.theme-switch-icon {
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 8px;
+  z-index: 0;
+  pointer-events: none;
+}
+.theme-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+}
+.theme-switch.is-dark .theme-switch-knob {
+  transform: translateX(32px);
+}
+.theme-switch:hover .theme-switch-knob {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+.theme-switch:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+/* Form controls: readable in both themes */
+input, select, textarea { color: #111827; }
+html.dark { color-scheme: dark; }
+html.dark input, html.dark select, html.dark textarea {
+  background-color: #2a2a2e !important;
+  color: #f3f4f6 !important;
+  border-color: #4b5563 !important;
+}
+html.dark input::placeholder, html.dark textarea::placeholder { color: #9ca3af !important; }
+html.dark option { background: #2a2a2e; color: #f3f4f6; }
+html.dark input[type='date']::-webkit-calendar-picker-indicator { filter: invert(1); }
+html.dark label { color: #e5e7eb !important; }
+
+/* Dark mode: panels, surfaces and text (overrides Tailwind utilities and component CSS) */
+html.dark .bg-white, html.dark .entries-container, html.dark .entries-table-wrapper, html.dark .entries-row, html.dark .modal-content { background-color: #1f1f23 !important; }
+html.dark .bg-gray-100 { background-color: #131315 !important; }
+html.dark .bg-gray-50, html.dark [class*='bg-gray-50'], html.dark .entries-thead th { background-color: #26262b !important; }
+html.dark .bg-indigo-50 { background-color: #312e81 !important; }
+html.dark .hover\:bg-gray-50:hover, html.dark .entries-row:hover { background-color: #2c2c32 !important; }
+html.dark .border-gray-100, html.dark .border-gray-200, html.dark .border-gray-300 { border-color: #3f3f46 !important; }
+html.dark .text-gray-900, html.dark .text-gray-800, html.dark .text-gray-700, html.dark .text-gray-600, html.dark .text-gray-500, html.dark h1, html.dark h2, html.dark h3, html.dark label, html.dark th, html.dark td { color: #e5e7eb !important; }
+html.dark .text-indigo-600 { color: #a5b4fc !important; }
+html.dark .entries-cell, html.dark .entries-header h2 { color: #e5e7eb !important; }
+
+/* Keep the printable receipt dark-on-white */
+html.dark .billing-receipt, html.dark .billing-receipt * { color: #111827 !important; }

@@ -4,7 +4,12 @@
 import React, { useState, useEffect } from 'react'
 import Entries, { EntryRow } from '../components/Entries'
 import Billing from '../components/Billing'
-//import { Navbar, NavOption } from '../components/Navbar';
+import { QuickAddPanel, TopSellersPanel } from '../components/SidePanels'
+import { CustomerProfileCard } from '../components/CustomerProfileCard'
+import { DigitalReceiptQR } from '../components/DigitalReceiptQR'
+import '../components/styles/SidePanels.css'
+import '../components/styles/BillPanels.css'
+
 /**
  * Interface for Customer Details state.
  */
@@ -14,7 +19,74 @@ interface CustomerDetails {
   date: string
 }
 
-const ConsumerBilling: React.FC = () => {
+export interface ConsumerBillingProps {
+  initialRecord?: any
+  onClearInitialRecord?: () => void
+}
+
+/**
+ * Parses items_summary string back into editable EntryRow items.
+ * Example: "10x Tshirt (Size: M), 2x Belt (Size: 30)"
+ */
+export function parseItemsSummary(summary: string, totalAmount?: number): EntryRow[] {
+  if (!summary || !summary.trim() || summary === '-') return []
+
+  const parts = summary.split(/,\s*(?=\d+x\s+)/)
+  const rows: EntryRow[] = []
+
+  parts.forEach((part) => {
+    const trimmed = part.trim()
+    if (!trimmed) return
+
+    const match = trimmed.match(/^(\d+)x\s+(.+?)\s+\(Size:\s*(.*?)\)$/)
+    if (match) {
+      const qty = parseInt(match[1], 10) || ''
+      const product = match[2].trim()
+      const rawSize = match[3].trim()
+      const size = rawSize === '-' || rawSize === 'NA' ? '' : rawSize
+
+      rows.push({
+        id: Math.random().toString(36).substring(2, 9),
+        product,
+        size,
+        qty,
+        rate: '',
+        amount: ''
+      })
+    } else {
+      const simpleMatch = trimmed.match(/^(\d+)x\s+(.+)$/)
+      if (simpleMatch) {
+        rows.push({
+          id: Math.random().toString(36).substring(2, 9),
+          product: simpleMatch[2].trim(),
+          size: '',
+          qty: parseInt(simpleMatch[1], 10) || '',
+          rate: '',
+          amount: ''
+        })
+      } else {
+        rows.push({
+          id: Math.random().toString(36).substring(2, 9),
+          product: trimmed,
+          size: '',
+          qty: 1,
+          rate: '',
+          amount: ''
+        })
+      }
+    }
+  })
+
+  // If there is only one item and totalAmount is given, calculate rate and amount
+  if (rows.length === 1 && typeof rows[0].qty === 'number' && rows[0].qty > 0 && totalAmount && totalAmount > 0) {
+    rows[0].amount = totalAmount
+    rows[0].rate = Math.round((totalAmount / rows[0].qty) * 100) / 100
+  }
+
+  return rows
+}
+
+const ConsumerBilling: React.FC<ConsumerBillingProps> = ({ initialRecord, onClearInitialRecord }) => {
   // State for Customer Details
   const [customer, setCustomer] = useState<CustomerDetails>({
     name: '',
@@ -28,6 +100,45 @@ const ConsumerBilling: React.FC = () => {
   // State for Payment Details
   const [paymentDetails, setPaymentDetails] = useState({ modeOfPayment: '', note: '' })
 
+  // State for editing existing transaction record
+  const [editingId, setEditingId] = useState<number | null>(null)
+
+  // Populate fields when editing an existing record from Records page
+  useEffect(() => {
+    if (initialRecord) {
+      setEditingId(initialRecord.id || null)
+
+      setCustomer({
+        name: initialRecord.customer_name || '',
+        contactNo: initialRecord.contact_no || '',
+        date: initialRecord.date || new Date().toISOString().split('T')[0]
+      })
+
+      let mode = initialRecord.payment_mode || ''
+      if (!mode) {
+        if (initialRecord.cash_amount > 0) mode = 'Cash'
+        else if (initialRecord.upi_amount > 0) mode = 'UPI'
+        else if (initialRecord.card_amount > 0) mode = 'Credit Card'
+        else if (initialRecord.credit_amount > 0) mode = 'On Credit'
+        else mode = 'Cash'
+      }
+
+      setPaymentDetails({
+        modeOfPayment: mode,
+        note: initialRecord.notes || ''
+      })
+
+      if (initialRecord.items_summary) {
+        const parsed = parseItemsSummary(initialRecord.items_summary, initialRecord.total_amount)
+        if (parsed.length > 0) {
+          setEntries(parsed)
+        }
+      }
+
+      onClearInitialRecord?.()
+    }
+  }, [initialRecord, onClearInitialRecord])
+
   // State to hold the submitted bill so it stays visible on the right
   const [submittedBill, setSubmittedBill] = useState<{
     customer: CustomerDetails
@@ -35,13 +146,45 @@ const ConsumerBilling: React.FC = () => {
     paymentDetails: { modeOfPayment: string; note: string }
   } | null>(null)
 
-  const DEFAULT_PRODUCTS = ['Tshirt', 'Jeans', 'Sando', 'Trousers', 'Shirt', 'Shorts', 'Jacket']
+  const DEFAULT_PRODUCTS = [
+    'Tshirt',
+    'Jeans',
+    'Sando',
+    'Trousers',
+    'Shirt',
+    'Shorts',
+    'Jacket',
+    'Sneakers',
+    'Watch',
+    'Hoodie',
+    'Sweater',
+    'Kurta',
+    'Saree',
+    'Dress',
+    'Skirt',
+    'Blazer',
+    'Track Pants',
+    'Leggings',
+    'Innerwear',
+    'Socks',
+    'Cap',
+    'Belt',
+    'Wallet',
+    'Sunglasses',
+    'Sandals',
+    'Formal Shoes'
+  ]
 
   // State for Available Products (with localStorage persistence)
   const [availableProducts, setAvailableProducts] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('availableProducts')
-      if (saved) return JSON.parse(saved)
+      if (saved !== null) {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed)) {
+          return parsed
+        }
+      }
     } catch (e) {
       console.error('Failed to parse availableProducts from localStorage', e)
     }
@@ -49,19 +192,50 @@ const ConsumerBilling: React.FC = () => {
   })
 
   const handleAddProduct = (newProduct: string) => {
-    if (newProduct && !availableProducts.includes(newProduct)) {
-      const updated = [...availableProducts, newProduct]
-      setAvailableProducts(updated)
-      localStorage.setItem('availableProducts', JSON.stringify(updated))
+    const trimmed = newProduct.trim()
+    if (!trimmed) return
+    if (availableProducts.some((p) => p.toLowerCase() === trimmed.toLowerCase())) {
+      return
+    }
+    const updated = [trimmed, ...availableProducts]
+    setAvailableProducts(updated)
+    localStorage.setItem('availableProducts', JSON.stringify(updated))
+  }
+
+  const handleDeleteProduct = (productToDelete: string) => {
+    const updated = availableProducts.filter((p) => p !== productToDelete)
+    setAvailableProducts(updated)
+    localStorage.setItem('availableProducts', JSON.stringify(updated))
+  }
+
+  const handleResetProducts = () => {
+    if (window.confirm('Reset Quick Add products to the original default list?')) {
+      setAvailableProducts(DEFAULT_PRODUCTS)
+      localStorage.setItem('availableProducts', JSON.stringify(DEFAULT_PRODUCTS))
     }
   }
-  // const [activeTab, setActiveTab] = useState<NavOption>('Billing');
 
-  // Calculate Total Revenue automatically from valid entries
-  // const totalRevenue = entries.reduce(
-  //   (sum, row) => sum + (Number(row.amount) || 0),
-  //   0
-  // );
+
+  // Quick-add: fill the last empty row, otherwise append a new row with the product
+  const handleQuickAdd = (product: string) => {
+    setEntries((prev) => {
+      const last = prev[prev.length - 1]
+      if (last && !last.product && !last.qty && !last.rate && !last.size) {
+        return prev.map((r, i) => (i === prev.length - 1 ? { ...r, product } : r))
+      }
+      return [
+        ...prev,
+        {
+          id: Math.random().toString(36).substring(2, 9),
+          product,
+          size: '',
+          qty: '',
+          rate: '',
+          amount: ''
+        }
+      ]
+    })
+  }
 
   // Handler for input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,18 +255,6 @@ const ConsumerBilling: React.FC = () => {
       }
     }
   }, [entries, customer, submittedBill])
-
-  //   const formatToNormalDate = (dateString: string) =>{
-  //     if(!dateString) return '';
-  //     try {
-  //       const [year, month, day] = dateString.split('-').map(Number);
-
-  //     } catch (error) {
-  //       console.error('Failed to format date:', error);
-  //       return dateString;
-  //     }
-
-  //   };
 
   const handleTransactionSubmit = async () => {
     // @ts-ignore - Electron IPC call
@@ -146,9 +308,6 @@ const ConsumerBilling: React.FC = () => {
       await showError('On Credit option needs to have notes (e.g. details of credit).')
       return
     }
-
-    const dateStr = (customer.date || new Date().toISOString().split('T')[0]).replace(/-/g, '')
-    const defaultFilename = `Invoice_${customer.contactNo || 'Guest'}_${dateStr}.pdf`
 
     // Calculate totals per payment mode
     let cashAmount = 0
@@ -207,20 +366,6 @@ const ConsumerBilling: React.FC = () => {
         // @ts-ignore - Electron IPC call
         const result = await window.electron.ipcRenderer.invoke('submit-transaction', record)
         if (result.success) {
-          // After DB save, trigger PDF save if the user wants it
-          // @ts-ignore - Electron IPC call
-          const response = await window.electron.ipcRenderer.invoke('show-message-box', {
-            type: 'question',
-            buttons: ['Yes', 'No'],
-            title: 'Create PDF',
-            message: 'Do you want to create PDF?'
-          })
-
-          if (response.response === 0) {
-            // @ts-ignore - Electron IPC call
-            window.electron.ipcRenderer.send('save-bill-pdf', defaultFilename)
-          }
-
           // Capture the bill to keep it displayed
           setSubmittedBill({ customer, entries, paymentDetails })
 
@@ -254,137 +399,154 @@ const ConsumerBilling: React.FC = () => {
   }
 
   return (
-    <div className="bg-gray-100 p-6 flex flex-col items-center ">
-      {/* Main Container */}
-      <div className="w-full max-w-7xl bg-white rounded-xl shadow-lg flex flex-col overflow-hidden">
-        {/* Header Section */}
-        <header className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white">
-          <div className="flex items-center space-x-2">
-            {/* <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">L</span>
-            </div> */}
-          </div>
+    <div className="bg-gray-100 p-2 sm:p-4 md:p-6 flex flex-col items-center">
+      <div className="dashboard-layout">
+        {/* Left Side: Quick-Add Tiles */}
+        <QuickAddPanel
+          products={availableProducts}
+          onPick={handleQuickAdd}
+          onAddProduct={handleAddProduct}
+          onDeleteProduct={handleDeleteProduct}
+          onResetProducts={handleResetProducts}
+        />
 
-          {/* <div className="bg-green-100 text-green-700 px-4 py-2 rounded-full font-semibold text-sm border border-green-200">
-            Total Revenue: <span className="ml-1">₹{totalRevenue.toFixed(2)}</span>
-          </div> */}
-        </header>
+        {/* Center: Main Dashboard Container */}
+        <div className="w-full glass-card rounded-xl flex flex-col overflow-hidden">
+          {/* Header Quote Section */}
+          <header className="px-3 py-3 sm:px-8 sm:py-6 border-b border-gray-100 flex justify-center items-center bg-white">
+            <blockquote className="header-quote">
+              “Trends expire. The aura doesn&apos;t.”
+            </blockquote>
+          </header>
 
-        {/* Content Area */}
-        <main className="p-8 space-y-8">
-          {/* Daily Totals Section */}
-          {/* <section className="grid grid-cols-2 md:grid-cols-5 gap-6">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
-              <span className="text-gray-500 text-sm font-medium">Total Sale</span>
-              <span className="text-2xl font-bold text-indigo-600">₹{dailyTotals.Total.toFixed(2)}</span>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
-              <span className="text-gray-500 text-sm font-medium">Cash</span>
-              <span className="text-2xl font-bold text-green-600">₹{dailyTotals.Cash.toFixed(2)}</span>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
-              <span className="text-gray-500 text-sm font-medium">Card</span>
-              <span className="text-2xl font-bold text-blue-600">₹{dailyTotals.Card.toFixed(2)}</span>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
-              <span className="text-gray-500 text-sm font-medium">UPI</span>
-              <span className="text-2xl font-bold text-purple-600">₹{dailyTotals.UPI.toFixed(2)}</span>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center">
-              <span className="text-gray-500 text-sm font-medium">Credit</span>
-              <span className="text-2xl font-bold text-red-500">₹{dailyTotals.Credit.toFixed(2)}</span>
-            </div>
-          </section> */}
-
-          {/* Customer Details Section */}
-          <section className="p-6 border border-gray-200 rounded-xl bg-gray-50/50">
-            <h2 className="text-lg font-semibold text-gray-700 mb-6 flex items-center">
-              <span className="w-2 h-6 bg-indigo-500 rounded-full mr-3"></span>
-              Customer Details
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Customer Name */}
-              <div className="space-y-2">
-                <label htmlFor="name" className="block text-sm font-bold text-gray-700">
-                  Customer Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={customer.name}
-                  onChange={handleInputChange}
-                  placeholder="Enter name"
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white"
-                />
+          {/* Content Area */}
+          <main className="p-3 sm:p-6 md:p-8 space-y-4 sm:space-y-6 md:space-y-8">
+            {/* Editing Notice Banner */}
+            {editingId && (
+              <div className="flex items-center justify-between p-3.5 bg-indigo-50 border border-indigo-200 rounded-xl text-xs sm:text-sm font-semibold text-indigo-700 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <span>
+                    Editing Transaction #{editingId} — Consumer details &amp; items loaded into fields below.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingId(null)
+                    setCustomer({ name: '', contactNo: '', date: new Date().toISOString().split('T')[0] })
+                    setEntries([])
+                    setPaymentDetails({ modeOfPayment: '', note: '' })
+                  }}
+                  className="px-3 py-1 bg-white border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors text-indigo-700 font-semibold text-xs"
+                >
+                  Clear Form
+                </button>
               </div>
+            )}
 
-              {/* Contact No */}
-              <div className="space-y-2">
-                <label htmlFor="contactNo" className="block text-sm font-bold text-gray-700">
-                  Contact Number
-                </label>
-                <input
-                  type="text"
-                  id="contactNo"
-                  name="contactNo"
-                  value={customer.contactNo}
-                  onChange={handleInputChange}
-                  placeholder="Enter contact number"
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white"
-                />
+            {/* Customer Details Section */}
+            <section className="p-3.5 sm:p-6 border border-gray-200 rounded-xl bg-gray-50/50">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-700 mb-4 sm:mb-6 flex items-center">
+                <span className="w-2 h-5 sm:h-6 bg-indigo-500 rounded-full mr-2.5 sm:mr-3"></span>
+                Customer Details
+              </h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-6">
+                {/* Customer Name */}
+                <div className="space-y-1.5 sm:space-y-2">
+                  <label htmlFor="name" className="block text-xs sm:text-sm font-bold text-gray-700">
+                    Customer Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={customer.name}
+                    onChange={handleInputChange}
+                    placeholder="Enter name"
+                    required
+                    className="w-full px-3.5 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white text-base sm:text-sm"
+                  />
+                </div>
+
+                {/* Contact No */}
+                <div className="space-y-1.5 sm:space-y-2">
+                  <label htmlFor="contactNo" className="block text-xs sm:text-sm font-bold text-gray-700">
+                    Contact Number
+                  </label>
+                  <input
+                    type="text"
+                    id="contactNo"
+                    name="contactNo"
+                    value={customer.contactNo}
+                    onChange={handleInputChange}
+                    placeholder="Enter contact number"
+                    required
+                    className="w-full px-3.5 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white text-base sm:text-sm"
+                  />
+                </div>
+
+                {/* Date */}
+                <div className="space-y-1.5 sm:space-y-2">
+                  <label htmlFor="date" className="block text-xs sm:text-sm font-bold text-gray-700">
+                    Date of Purchase <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    id="date"
+                    name="date"
+                    value={customer.date}
+                    onChange={handleInputChange}
+                    placeholder="MM/DD/YYYY"
+                    required
+                    className="w-full px-3.5 py-2 sm:px-4 sm:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white text-base sm:text-sm"
+                  />
+                </div>
               </div>
+            </section>
 
-              {/* Date */}
-              <div className="space-y-2">
-                <label htmlFor="date" className="block text-sm font-bold text-gray-700">
-                  Date of Purchase <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  id="date"
-                  name="date"
-                  value={customer.date}
-                  onChange={handleInputChange}
-                  placeholder="MM/DD/YYYY"
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white"
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Placeholders for Future Modules */}
-          <div className="grid grid-cols-1 gap-8">
             {/* Product Table Module */}
-            <Entries
-              rows={entries}
-              setRows={setEntries}
-              availableProducts={availableProducts}
-              onAddProduct={handleAddProduct}
-              paymentDetails={paymentDetails}
-              setPaymentDetails={setPaymentDetails}
-              onSubmit={handleTransactionSubmit}
-            />
+            <div className="grid grid-cols-1 gap-4 sm:gap-8">
+              <Entries
+                rows={entries}
+                setRows={setEntries}
+                availableProducts={availableProducts}
+                onAddProduct={handleAddProduct}
+                paymentDetails={paymentDetails}
+                setPaymentDetails={setPaymentDetails}
+                onSubmit={handleTransactionSubmit}
+              />
 
-            <Billing 
-              customer={submittedBill ? submittedBill.customer : customer} 
-              entries={submittedBill ? submittedBill.entries : entries} 
-              paymentDetails={submittedBill ? submittedBill.paymentDetails : paymentDetails} 
-              onSend={() => setSubmittedBill(null)}
-            />
-          </div>
-        </main>
+              {/* 3-Column Bill Station: Profile (Left) | Receipt (Center) | UPI Pay QR (Right) */}
+              <div className="bill-checkout-grid">
+                <CustomerProfileCard
+                  customer={submittedBill ? submittedBill.customer : customer}
+                />
+                <Billing
+                  customer={submittedBill ? submittedBill.customer : customer}
+                  entries={submittedBill ? submittedBill.entries : entries}
+                  paymentDetails={submittedBill ? submittedBill.paymentDetails : paymentDetails}
+                  onSend={() => setSubmittedBill(null)}
+                />
+                <DigitalReceiptQR
+                  customer={submittedBill ? submittedBill.customer : customer}
+                  entries={submittedBill ? submittedBill.entries : entries}
+                  paymentDetails={submittedBill ? submittedBill.paymentDetails : paymentDetails}
+                />
+              </div>
+            </div>
+          </main>
 
-        {/* Footer info */}
-        <footer className="px-8 py-4 bg-gray-50 border-t border-gray-100 text-center">
-          <p className="text-xs text-gray-400">
-            © 2026 Clothing Inventory Management - Offline Edition
-          </p>
-        </footer>
+          {/* Footer info */}
+          <footer className="px-8 py-4 bg-gray-50 border-t border-gray-100 text-center">
+            <p className="text-xs text-gray-400">
+              © 2026 Inventory Management System - Offline Edition
+            </p>
+          </footer>
+        </div>
+
+        {/* Right Side: Top Sellers Mini Bar Chart */}
+        <TopSellersPanel refreshKey={submittedBill} />
       </div>
     </div>
   )

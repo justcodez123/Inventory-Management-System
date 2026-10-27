@@ -1,0 +1,326 @@
+/* ==========================================================================
+   VENDORS & WHOLESALERS KHATA STYLESHEET
+   Harmonized with Records & ConsumerDashboard styling
+   ========================================================================== */
+
+/* Custom smooth scrollbar for wholesalers sidebar */
+.vendors-sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.vendors-sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.vendors-sidebar-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+html.dark .vendors-sidebar-scroll::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+/* ==========================================================================
+   1. Wholesalers Directory Left Sidebar & Cards
+   ========================================================================== */
+
+.vendor-sidebar {
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+html.dark .vendor-sidebar,
+[data-theme='dark'] .vendor-sidebar {
+  background: #1f1f23 !important;
+  border-color: #2e2e35 !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Base Wholesaler Card in Left Navigation */
+.vendor-item-card {
+  position: relative;
+  border-radius: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  text-align: left;
+  box-sizing: border-box;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.2s ease,
+              border-color 0.2s ease,
+              box-shadow 0.22s ease;
+  user-select: none;
+}
+
+/* Unselected Wholesaler Card - Light Mode */
+.vendor-item-default {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  color: #1e293b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.vendor-item-default:hover {
+  border-color: #93c5fd;
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+}
+
+/* Selected Wholesaler Card - Light Mode (Enlarged + Blue Border) */
+.vendor-item-selected {
+  background: #eff6ff;
+  border: 2px solid #2563eb;
+  transform: scale(1.025);
+  box-shadow: 0 8px 22px -4px rgba(37, 99, 235, 0.2);
+  z-index: 10;
+}
+
+/* Unselected Wholesaler Card - Dark Mode (Sleek, gentle on eyes) */
+html.dark .vendor-item-default,
+[data-theme='dark'] .vendor-item-default {
+  background: #18181b !important;
+  border: 1.5px solid #27272a !important;
+  color: #f4f4f5 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.dark .vendor-item-default:hover,
+[data-theme='dark'] .vendor-item-default:hover {
+  background: #202026 !important;
+  border-color: #3b82f6 !important;
+  transform: translateY(-1px) scale(1.015) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Selected Wholesaler Card - Dark Mode (Deep Navy Slate, Crisp Blue Border, Enlarged) */
+html.dark .vendor-item-selected,
+[data-theme='dark'] .vendor-item-selected {
+  background: #111827 !important; /* Gentle dark navy slate - completely eliminates eye strain */
+  border: 2px solid #3b82f6 !important; /* Crisp modern blue border */
+  transform: scale(1.035) !important; /* Prominently enlarged */
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35),
+              0 10px 28px -4px rgba(0, 0, 0, 0.8),
+              0 2px 14px rgba(59, 130, 246, 0.25) !important;
+  z-index: 10;
+}
+
+/* Card Internal Typography & Badges */
+.vendor-name {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: #0f172a;
+}
+
+html.dark .vendor-name,
+[data-theme='dark'] .vendor-name {
+  color: #f8fafc !important;
+}
+
+html.dark .vendor-item-selected .vendor-name,
+[data-theme='dark'] .vendor-item-selected .vendor-name {
+  color: #60a5fa !important;
+  font-weight: 800;
+}
+
+.vendor-city-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+html.dark .vendor-city-badge,
+[data-theme='dark'] .vendor-city-badge {
+  background: #27272a !important;
+  color: #94a3b8 !important;
+  border: 1px solid #3f3f46 !important;
+}
+
+html.dark .vendor-item-selected .vendor-city-badge,
+[data-theme='dark'] .vendor-item-selected .vendor-city-badge {
+  background: #1e3a5f !important;
+  color: #93c5fd !important;
+  border: 1px solid #2563eb !important;
+}
+
+.vendor-qty-taken {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+html.dark .vendor-qty-taken,
+[data-theme='dark'] .vendor-qty-taken {
+  color: #94a3b8 !important;
+}
+
+.vendor-due-badge {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+html.dark .vendor-due-badge,
+[data-theme='dark'] .vendor-due-badge {
+  background: rgba(220, 38, 38, 0.16) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(220, 38, 38, 0.38) !important;
+}
+
+.vendor-clear-badge {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+html.dark .vendor-clear-badge,
+[data-theme='dark'] .vendor-clear-badge {
+  background: rgba(16, 185, 129, 0.16) !important;
+  color: #34d399 !important;
+  border: 1px solid rgba(16, 185, 129, 0.38) !important;
+}
+
+/* ==========================================================================
+   2. Page Container, Main Card & Header
+   ========================================================================== */
+
+.vendors-page-wrapper {
+  transition: background-color 0.25s ease;
+}
+
+html.dark .vendors-page-wrapper,
+[data-theme='dark'] .vendors-page-wrapper {
+  background: #111114 !important;
+}
+
+.vendors-main-card {
+  border: 1px solid #e5e7eb;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+html.dark .vendors-main-card,
+[data-theme='dark'] .vendors-main-card {
+  background: #18181b !important;
+  border-color: #27272a !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6) !important;
+}
+
+.vendors-header-banner {
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+html.dark .vendors-header-banner,
+[data-theme='dark'] .vendors-header-banner {
+  background: #1f1f23 !important;
+  border-color: #2e2e35 !important;
+}
+
+/* KPI Summary Cards */
+.vendor-kpi-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  transition: all 0.2s ease;
+}
+
+html.dark .vendor-kpi-card,
+[data-theme='dark'] .vendor-kpi-card {
+  background: #1f1f23 !important;
+  border-color: #2e2e35 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Ledger Table */
+.vendor-table-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+html.dark .vendor-table-card,
+[data-theme='dark'] .vendor-table-card {
+  background: #1f1f23 !important;
+  border-color: #2e2e35 !important;
+}
+
+html.dark .vendor-table-th,
+[data-theme='dark'] .vendor-table-th {
+  background: #26262b !important;
+  color: #cbd5e1 !important;
+  border-bottom: 1px solid #3f3f46 !important;
+}
+
+html.dark .vendor-table-td,
+[data-theme='dark'] .vendor-table-td {
+  border-bottom: 1px solid #27272a !important;
+  color: #e4e4e7 !important;
+}
+
+html.dark .vendor-table-row:hover,
+[data-theme='dark'] .vendor-table-row:hover {
+  background: #26262b !important;
+}
+
+/* ==========================================================================
+   3. Vendors Authentication Lock View
+   ========================================================================== */
+
+.vendors-auth-lock-card {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.dark .vendors-auth-lock-card,
+[data-theme='dark'] .vendors-auth-lock-card {
+  background: #18181b !important;
+  border-color: #2e2e35 !important;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.7) !important;
+}
+
+html.dark .vendor-lock-icon,
+[data-theme='dark'] .vendor-lock-icon {
+  background: rgba(99, 102, 241, 0.12) !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+  color: #818cf8 !important;
+}
+
+html.dark .vendor-lock-title,
+[data-theme='dark'] .vendor-lock-title {
+  color: #ffffff !important;
+}
+
+html.dark .vendor-lock-sub,
+[data-theme='dark'] .vendor-lock-sub {
+  color: #94a3b8 !important;
+}
+
+/* ==========================================================================
+   4. Vendor Modals
+   ========================================================================== */
+
+html.dark .vendor-modal-card,
+[data-theme='dark'] .vendor-modal-card {
+  background: #18181b !important;
+  border-color: #27272a !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8) !important;
+}
+
+html.dark .vendor-modal-header,
+[data-theme='dark'] .vendor-modal-header {
+  background: #202026 !important;
+  border-bottom-color: #2e2e35 !important;
+}
+
+html.dark .vendor-preview-box,
+[data-theme='dark'] .vendor-preview-box {
+  background: #202026 !important;
+  border-color: #2e2e35 !important;
+  color: #cbd5e1 !important;
+}
+
