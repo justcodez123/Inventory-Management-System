@@ -39,7 +39,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
-        run: npm run build && npx electron-builder --win ${{ github.event_name != 'pull_request' && '--publish always' || '' }}
+        run: npm run build && npx electron-builder --win --publish never
 
       # - name: Build for macOS
       #   if: matrix.os == 'macos-latest'
@@ -67,4 +67,3 @@ jobs:
             app/dist/*.exe
             app/dist/*.yml
           retention-days: 7
-
