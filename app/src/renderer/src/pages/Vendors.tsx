@@ -2,6 +2,11 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
+import {
+  isVendorNotifStopped,
+  stopVendorNotificationsForTwoHours,
+  startVendorNotificationsNow
+} from '../components/ArrivalAlertBanner'
 import '../components/styles/Vendors.css'
 
 export interface Vendor {
@@ -21,6 +26,7 @@ export interface VendorTransaction {
   id: number
   wholesaler_id: number
   date: string
+  arrival_date?: string
   transaction_type: 'PURCHASE' | 'PAYMENT'
   product?: string
   quantity: number
@@ -77,6 +83,7 @@ const MOCK_TRANSACTIONS: Record<number, VendorTransaction[]> = {
       id: 101,
       wholesaler_id: 1,
       date: '2026-05-14',
+      arrival_date: '2026-05-16',
       transaction_type: 'PURCHASE',
       product: 'Jeans',
       quantity: 56,
@@ -109,10 +116,43 @@ export const Vendors: React.FC = () => {
   })
   const [isEditingVendor, setIsEditingVendor] = useState<boolean>(false)
 
+  // Editing transaction state (for Stock or Payment entries)
+  const [editingTransaction, setEditingTransaction] = useState<VendorTransaction | null>(null)
+
+  // Vendor Notification Stop / Start state (auto-resumes after 2 hours when stopped)
+  const [isNotifStopped, setIsNotifStopped] = useState<boolean>(() => isVendorNotifStopped())
+
+  useEffect(() => {
+    const syncNotif = () => {
+      setIsNotifStopped(isVendorNotifStopped())
+    }
+    window.addEventListener('vendor-notif-state-changed', syncNotif)
+    const interval = setInterval(syncNotif, 5000)
+    return () => {
+      window.removeEventListener('vendor-notif-state-changed', syncNotif)
+      clearInterval(interval)
+    }
+  }, [])
+
+  const handleToggleVendorNotifications = () => {
+    if (!isLoggedIn) {
+      setShowLoginModal(true)
+      return
+    }
+    if (isVendorNotifStopped()) {
+      startVendorNotificationsNow()
+      setIsNotifStopped(false)
+    } else {
+      stopVendorNotificationsForTwoHours()
+      setIsNotifStopped(true)
+    }
+  }
+
   // Stock (Purchase/Lease) Modal state
   const [showStockModal, setShowStockModal] = useState<boolean>(false)
   const [stockFormData, setStockFormData] = useState({
     date: new Date().toISOString().split('T')[0],
+    arrival_date: '',
     product: '',
     quantity: '',
     bill_amount: '',
@@ -185,6 +225,24 @@ export const Vendors: React.FC = () => {
     }
   }, [selectedVendorId])
 
+  // Sync mock arrivals in browser preview mode and notify global ArrivalAlertBanner
+  useEffect(() => {
+    if (!isElectron && vendors.length > 0) {
+      const mockArrivals = transactions
+        .filter((t) => t.transaction_type === 'PURCHASE' && t.arrival_date)
+        .map((t) => {
+          const v = vendors.find((vend) => vend.id === t.wholesaler_id)
+          return {
+            ...t,
+            wholesaler_name: v?.name || 'Wholesaler',
+            wholesaler_city: v?.city || ''
+          }
+        })
+      localStorage.setItem('mock_upcoming_arrivals', JSON.stringify(mockArrivals))
+      window.dispatchEvent(new CustomEvent('vendor-arrivals-updated'))
+    }
+  }, [isElectron, transactions, vendors])
+
   const selectedVendor = vendors.find((v) => v.id === selectedVendorId) || null
 
   // Filter vendors by search
@@ -196,6 +254,70 @@ export const Vendors: React.FC = () => {
       (v.phone && v.phone.includes(q))
     )
   })
+
+  // Pure helper for browser fallback mode to keep chronological ledger & KPI totals 100% accurate
+  const applyMockRecalculation = (
+    vendorId: number,
+    rawTxList: VendorTransaction[],
+    openingBalanceOverride?: number
+  ) => {
+    const targetVendor = vendors.find((v) => v.id === vendorId)
+    const openingBal =
+      openingBalanceOverride !== undefined
+        ? openingBalanceOverride
+        : Number(targetVendor?.opening_balance) || 0
+
+    // Sort chronologically (oldest first) to compute running_outstanding accurately
+    const chronological = [...rawTxList].sort(
+      (a, b) => a.date.localeCompare(b.date) || a.id - b.id
+    )
+
+    let running = openingBal
+    let totalQty = 0
+    let totalPurchases = 0
+    let totalPaid = 0
+
+    const recalculatedChronological = chronological.map((t) => {
+      const bill = Number(t.bill_amount) || 0
+      const paid = Number(t.paid_amount) || 0
+      const qty = Number(t.quantity) || 0
+      const pending = bill - paid
+      running += pending
+      totalQty += qty
+      totalPurchases += bill
+      totalPaid += paid
+
+      return {
+        ...t,
+        quantity: qty,
+        bill_amount: bill,
+        paid_amount: paid,
+        pending_amount: pending,
+        running_outstanding: running
+      }
+    })
+
+    // Display newest first in the table (matching SQLite ORDER BY date DESC, id DESC)
+    const displayOrdered = [...recalculatedChronological].sort(
+      (a, b) => b.date.localeCompare(a.date) || b.id - a.id
+    )
+
+    setTransactions(displayOrdered)
+    setVendors((prev) =>
+      prev.map((v) =>
+        v.id === vendorId
+          ? {
+              ...v,
+              opening_balance: openingBal,
+              total_quantity: totalQty,
+              total_purchases: totalPurchases,
+              total_paid: totalPaid,
+              current_outstanding: running
+            }
+          : v
+      )
+    )
+  }
 
   // Save / Update Wholesaler
   const handleSaveVendor = async (e: React.FormEvent) => {
@@ -228,9 +350,13 @@ export const Vendors: React.FC = () => {
           })
         }
         await loadVendors()
+        if (selectedVendorId) {
+          await loadTransactions(selectedVendorId)
+        }
       } else {
         // Mock fallback
         if (isEditingVendor) {
+          const newOpening = Number(vendorFormData.opening_balance) || 0
           setVendors((prev) =>
             prev.map((v) =>
               v.id === vendorFormData.id
@@ -239,11 +365,15 @@ export const Vendors: React.FC = () => {
                     name: vendorFormData.name,
                     phone: vendorFormData.phone,
                     city: vendorFormData.city,
+                    opening_balance: newOpening,
                     notes: vendorFormData.notes
                   }
                 : v
             )
           )
+          if (selectedVendorId === vendorFormData.id) {
+            applyMockRecalculation(vendorFormData.id, transactions, newOpening)
+          }
         } else {
           const newV: Vendor = {
             id: Date.now(),
@@ -262,6 +392,7 @@ export const Vendors: React.FC = () => {
         }
       }
       setShowVendorModal(false)
+      window.dispatchEvent(new CustomEvent('vendor-arrivals-updated'))
     } catch (err) {
       console.error(err)
       alert('Error saving wholesaler')
@@ -286,13 +417,14 @@ export const Vendors: React.FC = () => {
         if (updated.length > 0) setSelectedVendorId(updated[0].id)
         else setSelectedVendorId(null)
       }
+      window.dispatchEvent(new CustomEvent('vendor-arrivals-updated'))
     } catch (err) {
       console.error(err)
       alert('Failed to delete vendor')
     }
   }
 
-  // Add Purchase / Stock Taken
+  // Add or Edit Purchase / Stock Taken
   const handleSaveStock = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedVendorId) return
@@ -312,68 +444,93 @@ export const Vendors: React.FC = () => {
 
     try {
       if (isElectron) {
-        // @ts-ignore
-        await window.electron.ipcRenderer.invoke('add-vendor-transaction', {
-          wholesaler_id: selectedVendorId,
-          date: stockFormData.date,
-          transaction_type: 'PURCHASE',
-          product: stockFormData.product.trim(),
-          quantity: qty,
-          bill_amount: billAmt,
-          paid_amount: paidAmt,
-          notes: stockFormData.notes
-        })
+        if (editingTransaction) {
+          // @ts-ignore
+          await window.electron.ipcRenderer.invoke('update-vendor-transaction', {
+            id: editingTransaction.id,
+            wholesaler_id: selectedVendorId,
+            date: stockFormData.date,
+            arrival_date: stockFormData.arrival_date || null,
+            transaction_type: 'PURCHASE',
+            product: stockFormData.product.trim(),
+            quantity: qty,
+            bill_amount: billAmt,
+            paid_amount: paidAmt,
+            notes: stockFormData.notes
+          })
+        } else {
+          // @ts-ignore
+          await window.electron.ipcRenderer.invoke('add-vendor-transaction', {
+            wholesaler_id: selectedVendorId,
+            date: stockFormData.date,
+            arrival_date: stockFormData.arrival_date || null,
+            transaction_type: 'PURCHASE',
+            product: stockFormData.product.trim(),
+            quantity: qty,
+            bill_amount: billAmt,
+            paid_amount: paidAmt,
+            notes: stockFormData.notes
+          })
+        }
         await loadVendors()
         await loadTransactions(selectedVendorId)
       } else {
         const pending = billAmt - paidAmt
-        const prevOut = selectedVendor ? selectedVendor.current_outstanding : 0
-        const newOut = prevOut + pending
-        const newTx: VendorTransaction = {
-          id: Date.now(),
-          wholesaler_id: selectedVendorId,
-          date: stockFormData.date,
-          transaction_type: 'PURCHASE',
-          product: stockFormData.product,
-          quantity: qty,
-          bill_amount: billAmt,
-          paid_amount: paidAmt,
-          pending_amount: pending,
-          running_outstanding: newOut,
-          notes: stockFormData.notes
-        }
-        setTransactions((prev) => [newTx, ...prev])
-        setVendors((prev) =>
-          prev.map((v) =>
-            v.id === selectedVendorId
+        if (editingTransaction) {
+          const updatedList = transactions.map((t) =>
+            t.id === editingTransaction.id
               ? {
-                  ...v,
-                  total_quantity: v.total_quantity + qty,
-                  total_purchases: v.total_purchases + billAmt,
-                  total_paid: v.total_paid + paidAmt,
-                  current_outstanding: newOut
+                  ...t,
+                  date: stockFormData.date,
+                  arrival_date: stockFormData.arrival_date || undefined,
+                  product: stockFormData.product.trim(),
+                  quantity: qty,
+                  bill_amount: billAmt,
+                  paid_amount: paidAmt,
+                  pending_amount: pending,
+                  notes: stockFormData.notes
                 }
-              : v
+              : t
           )
-        )
+          applyMockRecalculation(selectedVendorId, updatedList)
+        } else {
+          const newTx: VendorTransaction = {
+            id: Date.now(),
+            wholesaler_id: selectedVendorId,
+            date: stockFormData.date,
+            arrival_date: stockFormData.arrival_date || undefined,
+            transaction_type: 'PURCHASE',
+            product: stockFormData.product.trim(),
+            quantity: qty,
+            bill_amount: billAmt,
+            paid_amount: paidAmt,
+            pending_amount: pending,
+            running_outstanding: 0,
+            notes: stockFormData.notes
+          }
+          applyMockRecalculation(selectedVendorId, [newTx, ...transactions])
+        }
       }
 
       setShowStockModal(false)
+      setEditingTransaction(null)
       setStockFormData({
         date: new Date().toISOString().split('T')[0],
+        arrival_date: '',
         product: '',
         quantity: '',
         bill_amount: '',
         paid_amount: '',
         notes: ''
       })
+      window.dispatchEvent(new CustomEvent('vendor-arrivals-updated'))
     } catch (err) {
       console.error(err)
       alert('Failed to save stock purchase entry')
     }
   }
 
-  // Record Payment Settlement Only
+  // Record or Edit Payment Settlement Only
   const handleSavePayment = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedVendorId) return
@@ -389,50 +546,70 @@ export const Vendors: React.FC = () => {
         : paymentFormData.payment_mode
 
       if (isElectron) {
-        // @ts-ignore
-        await window.electron.ipcRenderer.invoke('add-vendor-transaction', {
-          wholesaler_id: selectedVendorId,
-          date: paymentFormData.date,
-          transaction_type: 'PAYMENT',
-          product: 'Payment Settlement',
-          quantity: 0,
-          bill_amount: 0,
-          paid_amount: amt,
-          notes: noteStr
-        })
+        if (editingTransaction) {
+          // @ts-ignore
+          await window.electron.ipcRenderer.invoke('update-vendor-transaction', {
+            id: editingTransaction.id,
+            wholesaler_id: selectedVendorId,
+            date: paymentFormData.date,
+            arrival_date: editingTransaction.arrival_date || null,
+            transaction_type: 'PAYMENT',
+            product: 'Payment Settlement',
+            quantity: 0,
+            bill_amount: 0,
+            paid_amount: amt,
+            notes: noteStr
+          })
+        } else {
+          // @ts-ignore
+          await window.electron.ipcRenderer.invoke('add-vendor-transaction', {
+            wholesaler_id: selectedVendorId,
+            date: paymentFormData.date,
+            arrival_date: null,
+            transaction_type: 'PAYMENT',
+            product: 'Payment Settlement',
+            quantity: 0,
+            bill_amount: 0,
+            paid_amount: amt,
+            notes: noteStr
+          })
+        }
         await loadVendors()
         await loadTransactions(selectedVendorId)
       } else {
-        const prevOut = selectedVendor ? selectedVendor.current_outstanding : 0
-        const newOut = prevOut - amt
-        const newTx: VendorTransaction = {
-          id: Date.now(),
-          wholesaler_id: selectedVendorId,
-          date: paymentFormData.date,
-          transaction_type: 'PAYMENT',
-          product: 'Payment Settlement',
-          quantity: 0,
-          bill_amount: 0,
-          paid_amount: amt,
-          pending_amount: -amt,
-          running_outstanding: newOut,
-          notes: noteStr
-        }
-        setTransactions((prev) => [newTx, ...prev])
-        setVendors((prev) =>
-          prev.map((v) =>
-            v.id === selectedVendorId
+        if (editingTransaction) {
+          const updatedList = transactions.map((t) =>
+            t.id === editingTransaction.id
               ? {
-                  ...v,
-                  total_paid: v.total_paid + amt,
-                  current_outstanding: newOut
+                  ...t,
+                  date: paymentFormData.date,
+                  paid_amount: amt,
+                  pending_amount: -amt,
+                  notes: noteStr
                 }
-              : v
+              : t
           )
-        )
+          applyMockRecalculation(selectedVendorId, updatedList)
+        } else {
+          const newTx: VendorTransaction = {
+            id: Date.now(),
+            wholesaler_id: selectedVendorId,
+            date: paymentFormData.date,
+            transaction_type: 'PAYMENT',
+            product: 'Payment Settlement',
+            quantity: 0,
+            bill_amount: 0,
+            paid_amount: amt,
+            pending_amount: -amt,
+            running_outstanding: 0,
+            notes: noteStr
+          }
+          applyMockRecalculation(selectedVendorId, [newTx, ...transactions])
+        }
       }
 
       setShowPaymentModal(false)
+      setEditingTransaction(null)
       setPaymentFormData({
         date: new Date().toISOString().split('T')[0],
         amount: '',
@@ -442,6 +619,47 @@ export const Vendors: React.FC = () => {
     } catch (err) {
       console.error(err)
       alert('Failed to record payment')
+    }
+  }
+
+  // Edit single transaction
+  const handleEditTransaction = (tx: VendorTransaction) => {
+    setEditingTransaction(tx)
+    if (tx.transaction_type === 'PAYMENT') {
+      const paymentModes = ['Bank Transfer / UPI', 'Cash', 'Cheque', 'RTGS / NEFT']
+      let mode = 'Bank Transfer / UPI'
+      let customNotes = tx.notes || ''
+
+      for (const pm of paymentModes) {
+        if (customNotes.startsWith(`${pm} - `)) {
+          mode = pm
+          customNotes = customNotes.slice(`${pm} - `.length)
+          break
+        } else if (customNotes === pm) {
+          mode = pm
+          customNotes = ''
+          break
+        }
+      }
+
+      setPaymentFormData({
+        date: tx.date,
+        amount: String(tx.paid_amount || ''),
+        payment_mode: mode,
+        notes: customNotes
+      })
+      setShowPaymentModal(true)
+    } else {
+      setStockFormData({
+        date: tx.date,
+        arrival_date: tx.arrival_date || '',
+        product: tx.product || '',
+        quantity: tx.quantity ? String(tx.quantity) : '',
+        bill_amount: tx.bill_amount ? String(tx.bill_amount) : '',
+        paid_amount: tx.paid_amount ? String(tx.paid_amount) : '',
+        notes: tx.notes || ''
+      })
+      setShowStockModal(true)
     }
   }
 
@@ -457,24 +675,40 @@ export const Vendors: React.FC = () => {
           await loadTransactions(selectedVendorId)
         }
       } else {
-        setTransactions((prev) => prev.filter((t) => t.id !== txId))
+        const remaining = transactions.filter((t) => t.id !== txId)
+        if (selectedVendorId) {
+          applyMockRecalculation(selectedVendorId, remaining)
+        } else {
+          setTransactions(remaining)
+        }
       }
+      window.dispatchEvent(new CustomEvent('vendor-arrivals-updated'))
     } catch (err) {
       console.error(err)
       alert('Failed to delete transaction')
     }
   }
 
-  // Calculations for live preview in Add Stock Modal
+  // Calculations for live preview in Add / Edit Stock Modal
   const inputBillAmt = Number(stockFormData.bill_amount) || 0
   const inputPaidAmt = Number(stockFormData.paid_amount) || 0
   const inputPendingAmt = Math.max(inputBillAmt - inputPaidAmt, 0)
-  const currentVendorBalance = selectedVendor ? selectedVendor.current_outstanding : 0
+  const rawVendorBalance = selectedVendor ? selectedVendor.current_outstanding : 0
+  const currentVendorBalance =
+    editingTransaction && editingTransaction.transaction_type === 'PURCHASE'
+      ? rawVendorBalance -
+        ((Number(editingTransaction.bill_amount) || 0) -
+          (Number(editingTransaction.paid_amount) || 0))
+      : rawVendorBalance
   const projectedOutstanding = currentVendorBalance + (inputBillAmt - inputPaidAmt)
 
-  // Calculations for live preview in Record Payment Modal
+  // Calculations for live preview in Record / Edit Payment Modal
   const inputPayAmt = Number(paymentFormData.amount) || 0
-  const projectedBalanceAfterPay = currentVendorBalance - inputPayAmt
+  const paymentBaseBalance =
+    editingTransaction && editingTransaction.transaction_type === 'PAYMENT'
+      ? rawVendorBalance + (Number(editingTransaction.paid_amount) || 0)
+      : rawVendorBalance
+  const projectedBalanceAfterPay = paymentBaseBalance - inputPayAmt
 
   if (!isLoggedIn) {
     return (
@@ -505,8 +739,8 @@ export const Vendors: React.FC = () => {
   }
 
   return (
-    <div className="vendors-page-wrapper bg-gray-100 p-4 sm:p-6 flex flex-col items-center min-h-full">
-      <div className="vendors-main-card w-full max-w-7xl bg-white rounded-xl shadow-lg flex flex-col overflow-hidden p-6 sm:p-8 space-y-6 sm:space-y-8">
+    <div className="vendors-page-wrapper bg-gray-100 p-2 sm:p-4 flex flex-col items-center min-h-full">
+      <div className="vendors-main-card w-full max-w-[98%] 2xl:max-w-[1800px] bg-white rounded-xl shadow-lg flex flex-col overflow-hidden p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Top Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-gray-100">
           <div>
@@ -517,43 +751,65 @@ export const Vendors: React.FC = () => {
               Account for stock taken on lease/credit, payments given, and outstanding balance to wholesalers
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setIsEditingVendor(false)
-              setVendorFormData({
-                id: 0,
-                name: '',
-                phone: '',
-                city: '',
-                opening_balance: '',
-                notes: ''
-              })
-              setShowVendorModal(true)
-            }}
-            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-sm hover:shadow transition-all text-sm flex items-center justify-center gap-2 self-start sm:self-auto cursor-pointer"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={handleToggleVendorNotifications}
+              title={
+                isNotifStopped
+                  ? 'Resume upcoming stock arrival notifications (auto-resumes after 2 hours)'
+                  : 'Pause upcoming stock arrival notifications for 2 hours'
+              }
+              className={`px-4 py-2.5 font-semibold rounded-lg shadow-sm hover:shadow transition-all text-sm flex items-center justify-center gap-2 cursor-pointer border ${
+                isNotifStopped
+                  ? 'bg-grey-50 hover:bg-grey-100 text-grey-700 border-grey-300'
+                  : 'bg-red-50 hover:bg-red-100 text-red-800 border-red-300'
+              }`}
             >
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            <span>Add New Wholesaler</span>
-          </button>
+              <span>{isNotifStopped ? '🔔' : '🔕'}</span>
+              <span>
+                {isNotifStopped ? 'Start Vendor Notif.' : 'Stop Vendor Notifications'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditingVendor(false)
+                setVendorFormData({
+                  id: 0,
+                  name: '',
+                  phone: '',
+                  city: '',
+                  opening_balance: '',
+                  notes: ''
+                })
+                setShowVendorModal(true)
+              }}
+              className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-sm hover:shadow transition-all text-sm flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Add New Wholesaler</span>
+            </button>
+          </div>
         </div>
 
         {/* Main Split Layout: Directory + Ledger Panel */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* Left Sidebar: Wholesalers Directory */}
-          <aside className="vendor-sidebar lg:col-span-4 flex flex-col gap-4 p-4 sm:p-5">
+          <aside className="vendor-sidebar lg:col-span-3 flex flex-col gap-4 p-4 sm:p-5">
             <h3 className="text-base font-semibold text-gray-700 flex items-center">
               <span className="w-2 h-5 bg-indigo-500 rounded-full mr-2.5"></span>
               Wholesalers ({filteredVendors.length})
@@ -638,7 +894,7 @@ export const Vendors: React.FC = () => {
           </aside>
 
           {/* Right Main Panel: Selected Wholesaler Ledger & Actions */}
-          <main className="lg:col-span-8 flex flex-col space-y-6">
+          <main className="lg:col-span-9 flex flex-col space-y-6">
             {selectedVendor ? (
               <>
                 {/* Wholesaler Header Banner */}
@@ -670,7 +926,19 @@ export const Vendors: React.FC = () => {
                   <div className="flex flex-wrap items-center gap-2.5">
                     <button
                       type="button"
-                      onClick={() => setShowStockModal(true)}
+                      onClick={() => {
+                        setEditingTransaction(null)
+                        setStockFormData({
+                          date: new Date().toISOString().split('T')[0],
+                          arrival_date: '',
+                          product: '',
+                          quantity: '',
+                          bill_amount: '',
+                          paid_amount: '',
+                          notes: ''
+                        })
+                        setShowStockModal(true)
+                      }}
                       className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-sm hover:shadow transition-all text-xs sm:text-sm flex items-center gap-1.5 cursor-pointer"
                     >
                       <svg
@@ -691,7 +959,16 @@ export const Vendors: React.FC = () => {
 
                     <button
                       type="button"
-                      onClick={() => setShowPaymentModal(true)}
+                      onClick={() => {
+                        setEditingTransaction(null)
+                        setPaymentFormData({
+                          date: new Date().toISOString().split('T')[0],
+                          amount: '',
+                          payment_mode: 'Bank Transfer / UPI',
+                          notes: ''
+                        })
+                        setShowPaymentModal(true)
+                      }}
                       className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow-sm hover:shadow transition-all text-xs sm:text-sm flex items-center gap-1.5 cursor-pointer"
                     >
                       <span>💸</span>
@@ -817,6 +1094,7 @@ export const Vendors: React.FC = () => {
                       <thead className="bg-gray-50 text-gray-700 font-semibold border-b border-gray-200 text-xs uppercase tracking-wider">
                         <tr>
                           <th className="vendor-table-th px-4 py-3.5">Date</th>
+                          <th className="vendor-table-th px-4 py-3.5">Arrival Date</th>
                           <th className="vendor-table-th px-4 py-3.5">Product / Desc</th>
                           <th className="vendor-table-th px-4 py-3.5 text-center">Qty</th>
                           <th className="vendor-table-th px-4 py-3.5 text-right">Bill Amt</th>
@@ -830,7 +1108,7 @@ export const Vendors: React.FC = () => {
                       <tbody className="divide-y divide-gray-200">
                         {transactions.length === 0 ? (
                           <tr>
-                            <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
+                            <td colSpan={10} className="px-6 py-12 text-center text-gray-500">
                               <div className="flex flex-col items-center justify-center gap-1.5">
                                 <span className="text-2xl">📦</span>
                                 <p className="font-semibold text-gray-700">No transactions recorded yet for this wholesaler</p>
@@ -844,6 +1122,9 @@ export const Vendors: React.FC = () => {
                             return (
                               <tr key={tx.id} className="vendor-table-row hover:bg-gray-50 transition-colors">
                                 <td className="vendor-table-td px-4 py-3.5 text-gray-900 font-medium whitespace-nowrap">{tx.date}</td>
+                                <td className="vendor-table-td px-4 py-3.5 text-gray-600 font-medium whitespace-nowrap">
+                                  {tx.arrival_date || '-'}
+                                </td>
                                 <td className="vendor-table-td px-4 py-3.5 font-semibold">
                                   {isPaymentOnly ? (
                                     <span className="text-emerald-600 inline-flex items-center gap-1">
@@ -886,26 +1167,48 @@ export const Vendors: React.FC = () => {
                                   {tx.notes || '-'}
                                 </td>
                                 <td className="vendor-table-td px-4 py-3.5 text-center">
-                                  <button
-                                    type="button"
-                                    title="Delete entry"
-                                    onClick={() => handleDeleteTransaction(tx.id)}
-                                    className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors cursor-pointer"
-                                  >
-                                    <svg
-                                      width="16"
-                                      height="16"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
+                                  <div className="flex items-center justify-center gap-2.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEditTransaction(tx)}
+                                      className="text-blue-500 hover:text-blue-700 transition-colors p-1 cursor-pointer"
+                                      title="Edit Entry"
                                     >
-                                      <line x1="18" y1="6" x2="6" y2="18"></line>
-                                      <line x1="6" y1="6" x2="18" y2="18"></line>
-                                    </svg>
-                                  </button>
+                                      <svg
+                                        width="17"
+                                        height="17"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      >
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                      </svg>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      title="Delete entry"
+                                      onClick={() => handleDeleteTransaction(tx.id)}
+                                      className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                                    >
+                                      <svg
+                                        width="16"
+                                        height="16"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      >
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                      </svg>
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             )
@@ -1042,11 +1345,14 @@ export const Vendors: React.FC = () => {
         </div>
       )}
 
-      {/* ================= MODAL 2: ADD STOCK (PURCHASE / LEASE) ================= */}
+      {/* ================= MODAL 2: ADD / EDIT STOCK (PURCHASE / LEASE) ================= */}
       {showStockModal && selectedVendor && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-150"
-          onClick={() => setShowStockModal(false)}
+          onClick={() => {
+            setShowStockModal(false)
+            setEditingTransaction(null)
+          }}
         >
           <div
             className="vendor-modal-card bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-150"
@@ -1055,11 +1361,14 @@ export const Vendors: React.FC = () => {
             <div className="vendor-modal-header px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
               <h3 className="text-lg font-bold text-gray-800 flex items-center">
                 <span className="w-2 h-5 bg-indigo-500 rounded-full mr-2.5"></span>
-                Add Stock Taken — {selectedVendor.name}
+                {editingTransaction ? 'Edit Stock Entry' : 'Add Stock Taken'} — {selectedVendor.name}
               </h3>
               <button
                 type="button"
-                onClick={() => setShowStockModal(false)}
+                onClick={() => {
+                  setShowStockModal(false)
+                  setEditingTransaction(null)
+                }}
                 className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-200/50 transition-colors cursor-pointer"
               >
                 ✕
@@ -1082,18 +1391,32 @@ export const Vendors: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Product <span className="text-red-500">*</span>
+                    Arrival Date
                   </label>
                   <input
-                    type="text"
-                    required
-                    placeholder="e.g. Jeans, Shirts, Trousers"
+                    type="date"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-white text-gray-800 text-sm"
-                    value={stockFormData.product}
-                    onChange={(e) => setStockFormData({ ...stockFormData, product: e.target.value })}
-                    autoFocus
+                    value={stockFormData.arrival_date}
+                    onChange={(e) =>
+                      setStockFormData({ ...stockFormData, arrival_date: e.target.value })
+                    }
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Product <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Jeans, Shirts, Trousers"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-white text-gray-800 text-sm"
+                  value={stockFormData.product}
+                  onChange={(e) => setStockFormData({ ...stockFormData, product: e.target.value })}
+                  autoFocus
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1180,7 +1503,10 @@ export const Vendors: React.FC = () => {
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
                 <button
                   type="button"
-                  onClick={() => setShowStockModal(false)}
+                  onClick={() => {
+                    setShowStockModal(false)
+                    setEditingTransaction(null)
+                  }}
                   className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm cursor-pointer"
                 >
                   Cancel
@@ -1189,7 +1515,7 @@ export const Vendors: React.FC = () => {
                   type="submit"
                   className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-sm hover:shadow transition-all text-sm cursor-pointer"
                 >
-                  Save Stock Entry
+                  {editingTransaction ? 'Update Stock Entry' : 'Save Stock Entry'}
                 </button>
               </div>
             </form>
@@ -1197,11 +1523,14 @@ export const Vendors: React.FC = () => {
         </div>
       )}
 
-      {/* ================= MODAL 3: RECORD PAYMENT GIVEN ================= */}
+      {/* ================= MODAL 3: RECORD / EDIT PAYMENT GIVEN ================= */}
       {showPaymentModal && selectedVendor && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-150"
-          onClick={() => setShowPaymentModal(false)}
+          onClick={() => {
+            setShowPaymentModal(false)
+            setEditingTransaction(null)
+          }}
         >
           <div
             className="vendor-modal-card bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-150"
@@ -1210,11 +1539,14 @@ export const Vendors: React.FC = () => {
             <div className="vendor-modal-header px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
               <h3 className="text-lg font-bold text-gray-800 flex items-center">
                 <span className="w-2 h-5 bg-indigo-500 rounded-full mr-2.5"></span>
-                Record Payment Given — {selectedVendor.name}
+                {editingTransaction ? 'Edit Payment Given' : 'Record Payment Given'} — {selectedVendor.name}
               </h3>
               <button
                 type="button"
-                onClick={() => setShowPaymentModal(false)}
+                onClick={() => {
+                  setShowPaymentModal(false)
+                  setEditingTransaction(null)
+                }}
                 className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-200/50 transition-colors cursor-pointer"
               >
                 ✕
@@ -1275,7 +1607,7 @@ export const Vendors: React.FC = () => {
               <div className="vendor-preview-box p-3.5 bg-gray-50 border border-gray-200 rounded-xl space-y-1.5 text-xs text-gray-600">
                 <div className="flex justify-between">
                   <span>Current Outstanding Balance:</span>
-                  <span className="font-semibold text-gray-800">₹{currentVendorBalance.toLocaleString('en-IN')}</span>
+                  <span className="font-semibold text-gray-800">₹{paymentBaseBalance.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Payment Given:</span>
@@ -1309,7 +1641,10 @@ export const Vendors: React.FC = () => {
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
                 <button
                   type="button"
-                  onClick={() => setShowPaymentModal(false)}
+                  onClick={() => {
+                    setShowPaymentModal(false)
+                    setEditingTransaction(null)
+                  }}
                   className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm cursor-pointer"
                 >
                   Cancel
@@ -1318,14 +1653,18 @@ export const Vendors: React.FC = () => {
                   type="submit"
                   className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg shadow-sm hover:shadow transition-all text-sm cursor-pointer"
                 >
-                  Record Payment
+                  {editingTransaction ? 'Update Payment' : 'Record Payment'}
                 </button>
               </div>
             </form>
           </div>
         </div>
+
       )}
+      <div>
     </div>
+    </div>
+    
   )
 }
 

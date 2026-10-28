@@ -67,7 +67,22 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
                   ? 'filter blur-[0.5px] hover:blur-none opacity-80 hover:opacity-100'
                   : ''
               }`}
-              onClick={() => {
+              onClick={async () => {
+                if (option === 'Barcode Inventory') {
+                  // @ts-ignore
+                  if (window.electron?.ipcRenderer) {
+                    // @ts-ignore
+                    await window.electron.ipcRenderer.invoke('show-message-box', {
+                      type: 'info',
+                      title: 'Feature Locked',
+                      message: 'Contact Admin to unlock this feature'
+                    })
+                  } else {
+                    alert('Contact Admin to unlock this feature')
+                  }
+                  onTabChange('Billing')
+                  return
+                }
                 onTabChange(option)
                 if (option === 'Vendors' && !isLoggedIn) {
                   setShowLoginModal(true)

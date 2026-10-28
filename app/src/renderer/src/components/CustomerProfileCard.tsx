@@ -28,25 +28,25 @@ function getOrdinal(n: number): string {
 export const CustomerProfileCard: React.FC<CustomerProfileCardProps> = ({ customer }) => {
   const [stats, setStats] = useState<CustomerStats | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
-  const [noteTag, setNoteTag] = useState<string>('')
-  const [isEditingTag, setIsEditingTag] = useState<boolean>(false)
-  const [tempTag, setTempTag] = useState<string>('')
+  // const [noteTag, setNoteTag] = useState<string>('')
+  // const [isEditingTag, setIsEditingTag] = useState<boolean>(false)
+  // const [tempTag, setTempTag] = useState<string>('')
 
-  const customerIdentifier = customer.contactNo.trim() || customer.name.trim()
+  // const customerIdentifier = customer.contactNo.trim() || customer.name.trim()
 
-  // Load persisted custom preference tag
-  useEffect(() => {
-    if (customerIdentifier) {
-      const saved = localStorage.getItem(`addy_tag_${customerIdentifier}`)
-      if (saved) {
-        setNoteTag(saved)
-      } else {
-        setNoteTag('Prefers slim fit / size M')
-      }
-    } else {
-      setNoteTag('')
-    }
-  }, [customerIdentifier])
+  // // Load persisted custom preference tag
+  // useEffect(() => {
+  //   if (customerIdentifier) {
+  //     const saved = localStorage.getItem(`addy_tag_${customerIdentifier}`)
+  //     if (saved) {
+  //       setNoteTag(saved)
+  //     } else {
+  //       setNoteTag('Prefers slim fit / size M')
+  //     }
+  //   } else {
+  //     setNoteTag('')
+  //   }
+  // }, [customerIdentifier])
 
   // Fetch transaction history when name or contact changes
   useEffect(() => {
@@ -121,15 +121,15 @@ export const CustomerProfileCard: React.FC<CustomerProfileCardProps> = ({ custom
     return () => clearTimeout(timeout)
   }, [customer.name, customer.contactNo])
 
-  const handleSaveTag = () => {
-    if (customerIdentifier && tempTag.trim()) {
-      localStorage.setItem(`addy_tag_${customerIdentifier}`, tempTag.trim())
-      setNoteTag(tempTag.trim())
-    }
-    setIsEditingTag(false)
-  }
+  // const handleSaveTag = () => {
+  //   if (customerIdentifier && tempTag.trim()) {
+  //     localStorage.setItem(`addy_tag_${customerIdentifier}`, tempTag.trim())
+  //     setNoteTag(tempTag.trim())
+  //   }
+  //   setIsEditingTag(false)
+  // }
 
-  const quickPresets = ['Prefers slim fit / size M', 'Prefers cotton', 'Size L regular', 'VIP Client']
+  // const quickPresets = ['Prefers slim fit / size M', 'Prefers cotton', 'Size L regular', 'VIP Client']
 
   return (
     <aside className="bill-side-panel glass-card fade-in">
@@ -201,7 +201,7 @@ export const CustomerProfileCard: React.FC<CustomerProfileCardProps> = ({ custom
           </div>
 
           {/* Stat 4: Quick Note Tag */}
-          <div className="preference-section">
+          {/* <div className="preference-section">
             <div className="pref-header">
               <span className="pref-title">Quick Note</span>
               {!isEditingTag && (
@@ -266,7 +266,7 @@ export const CustomerProfileCard: React.FC<CustomerProfileCardProps> = ({ custom
                 <span className="pref-tag-text">{noteTag || 'Prefers slim fit / size M'}</span>
               </div>
             )}
-          </div>
+          </div> */}
         </div>
       )}
     </aside>

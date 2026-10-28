@@ -127,8 +127,8 @@ function initDb() {
 
   // Automatically ensure default authentication credentials (embeds password.js logic)
   try {
-    const defaultUser = process.env.USER1_NAME || 'user'
-    const defaultPass = process.env.USER1_PASSWORD || '1232131972'
+    const defaultUser = 'user'
+    const defaultPass = '123321'
 
     db.get('SELECT id, username, password FROM users WHERE username = ?', [defaultUser], (err, row: any) => {
       if (err) {
@@ -188,6 +188,7 @@ function initDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       wholesaler_id INTEGER NOT NULL,
       date TEXT NOT NULL,
+      arrival_date TEXT,
       transaction_type TEXT DEFAULT 'PURCHASE',
       product TEXT,
       quantity INTEGER DEFAULT 0,
@@ -200,6 +201,17 @@ function initDb() {
       FOREIGN KEY (wholesaler_id) REFERENCES wholesalers (id) ON DELETE CASCADE
     );
   `)
+
+  // Safely migrate wholesaler_transactions to add arrival_date if missing on existing databases
+  db.all('PRAGMA table_info(wholesaler_transactions)', (err, rows: any[]) => {
+    if (err || !Array.isArray(rows)) return
+    const existingCols = new Set(rows.map((r) => r.name))
+    if (!existingCols.has('arrival_date')) {
+      db.run('ALTER TABLE wholesaler_transactions ADD COLUMN arrival_date TEXT', (alterErr) => {
+        if (alterErr) console.warn('Migration note for column arrival_date:', alterErr.message)
+      })
+    }
+  })
 
   // Seed default wholesalers if table is brand new
   db.get('SELECT COUNT(*) as count FROM wholesalers', (err, row: any) => {
@@ -222,15 +234,15 @@ function initDb() {
         }
       )
       // 2. Mumbai Wholesaler
-      db.run(
-        'INSERT INTO wholesalers (name, phone, city, notes, opening_balance) VALUES (?, ?, ?, ?, ?)',
-        ['Mumbai Wholesaler', '+91 98190 44556', 'Mumbai', 'Wholesale supplier for jackets & trousers', 0]
-      )
+      // db.run(
+      //   'INSERT INTO wholesalers (name, phone, city, notes, opening_balance) VALUES (?, ?, ?, ?, ?)',
+      //   ['Mumbai Wholesaler', '+91 98190 44556', 'Mumbai', 'Wholesale supplier for jackets & trousers', 0]
+      // )
       // 3. Delhi Wholesaler
-      db.run(
-        'INSERT INTO wholesalers (name, phone, city, notes, opening_balance) VALUES (?, ?, ?, ?, ?)',
-        ['Delhi Wholesaler', '+91 98110 77889', 'Delhi', 'Cotton & casual wear supplier', 0]
-      )
+      // db.run(
+      //   'INSERT INTO wholesalers (name, phone, city, notes, opening_balance) VALUES (?, ?, ?, ?, ?)',
+      //   ['Delhi Wholesaler', '+91 98110 77889', 'Delhi', 'Cotton & casual wear supplier', 0]
+      // )
     }
   })
 
@@ -669,6 +681,32 @@ ipcMain.handle('update-user-password', async (_event, { username, newPassword })
 
   // ================= VENDORS & WHOLESALERS IPC HANDLERS =================
 
+  // Helper to recalculate pending_amount and running_outstanding chronologically for a wholesaler
+  const recalculateWholesalerBalances = async (wholesalerId: number) => {
+    const vendor = await getAsync('SELECT opening_balance FROM wholesalers WHERE id = ?', [wholesalerId]);
+    if (!vendor) return;
+
+    const txs = await allAsync(
+      'SELECT id, bill_amount, paid_amount, pending_amount, running_outstanding FROM wholesaler_transactions WHERE wholesaler_id = ? ORDER BY date ASC, id ASC',
+      [wholesalerId]
+    );
+
+    let running = Number(vendor.opening_balance) || 0;
+    for (const row of txs) {
+      const bill = Number(row.bill_amount) || 0;
+      const paid = Number(row.paid_amount) || 0;
+      const pending = bill - paid;
+      running += pending;
+
+      if (Number(row.pending_amount) !== pending || Number(row.running_outstanding) !== running) {
+        await runAsync(
+          'UPDATE wholesaler_transactions SET pending_amount = ?, running_outstanding = ? WHERE id = ?',
+          [pending, running, row.id]
+        );
+      }
+    }
+  };
+
   // Get all vendors with aggregate stats
   ipcMain.handle('get-vendors', async () => {
     try {
@@ -727,6 +765,7 @@ ipcMain.handle('update-user-password', async (_event, { username, newPassword })
           vendor.id
         ]
       );
+      await recalculateWholesalerBalances(Number(vendor.id));
       return { success: true };
     } catch (error) {
       console.error('Failed to update vendor:', error);
@@ -786,11 +825,12 @@ ipcMain.handle('update-user-password', async (_event, { username, newPassword })
 
       await runAsync(
         `INSERT INTO wholesaler_transactions 
-         (wholesaler_id, date, transaction_type, product, quantity, bill_amount, paid_amount, pending_amount, running_outstanding, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (wholesaler_id, date, arrival_date, transaction_type, product, quantity, bill_amount, paid_amount, pending_amount, running_outstanding, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           tx.wholesaler_id,
           tx.date,
+          tx.arrival_date || '',
           tx.transaction_type || 'PURCHASE',
           tx.product || '',
           Number(tx.quantity) || 0,
@@ -801,9 +841,49 @@ ipcMain.handle('update-user-password', async (_event, { username, newPassword })
           tx.notes || ''
         ]
       );
+      await recalculateWholesalerBalances(Number(tx.wholesaler_id));
       return { success: true };
     } catch (error) {
       console.error('Failed to add vendor transaction:', error);
+      return { success: false, error: String(error) };
+    }
+  });
+
+  // Update existing vendor transaction
+  ipcMain.handle('update-vendor-transaction', async (_event, tx) => {
+    try {
+      await assertLicenseActive();
+      const existing = await getAsync('SELECT wholesaler_id FROM wholesaler_transactions WHERE id = ?', [tx.id]);
+      if (!existing) {
+        return { success: false, error: 'Transaction not found' };
+      }
+
+      const billAmount = Number(tx.bill_amount) || 0;
+      const paidAmount = Number(tx.paid_amount) || 0;
+      const pendingAmount = billAmount - paidAmount;
+
+      await runAsync(
+        `UPDATE wholesaler_transactions
+         SET date = ?, arrival_date = ?, transaction_type = ?, product = ?, quantity = ?, bill_amount = ?, paid_amount = ?, pending_amount = ?, notes = ?
+         WHERE id = ?`,
+        [
+          tx.date,
+          tx.arrival_date || '',
+          tx.transaction_type || 'PURCHASE',
+          tx.product || '',
+          Number(tx.quantity) || 0,
+          billAmount,
+          paidAmount,
+          pendingAmount,
+          tx.notes || '',
+          tx.id
+        ]
+      );
+
+      await recalculateWholesalerBalances(Number(existing.wholesaler_id));
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to update vendor transaction:', error);
       return { success: false, error: String(error) };
     }
   });
@@ -812,11 +892,45 @@ ipcMain.handle('update-user-password', async (_event, { username, newPassword })
   ipcMain.handle('delete-vendor-transaction', async (_event, id) => {
     try {
       await assertLicenseActive();
+      const existing = await getAsync('SELECT wholesaler_id FROM wholesaler_transactions WHERE id = ?', [id]);
       const changes = await runAsyncChanges('DELETE FROM wholesaler_transactions WHERE id = ?', [id]);
+      if (changes > 0 && existing?.wholesaler_id) {
+        await recalculateWholesalerBalances(Number(existing.wholesaler_id));
+      }
       return { success: changes > 0 };
     } catch (error) {
       console.error('Failed to delete vendor transaction:', error);
       return { success: false, error: String(error) };
+    }
+  });
+
+  // Get all upcoming stock arrivals with wholesaler details
+  ipcMain.handle('get-upcoming-arrivals', async () => {
+    try {
+      await assertLicenseActive();
+      const rows = await allAsync(
+        `SELECT 
+          t.id,
+          t.wholesaler_id,
+          w.name AS wholesaler_name,
+          w.city AS wholesaler_city,
+          t.date,
+          t.arrival_date,
+          t.product,
+          t.quantity,
+          t.bill_amount,
+          t.notes
+        FROM wholesaler_transactions t
+        JOIN wholesalers w ON t.wholesaler_id = w.id
+        WHERE t.transaction_type = 'PURCHASE'
+          AND t.arrival_date IS NOT NULL
+          AND TRIM(t.arrival_date) != ''
+        ORDER BY t.arrival_date ASC, t.id DESC`
+      );
+      return rows;
+    } catch (error) {
+      console.error('Failed to get upcoming arrivals:', error);
+      return [];
     }
   });
 

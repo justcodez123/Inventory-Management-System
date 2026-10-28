@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useState, ReactNode } from 'react'
 
 interface AuthContextType {
   isLoggedIn: boolean
@@ -15,39 +15,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [user, setUser] = useState<string | null>(null)
   const [showLoginModal, setShowLoginModal] = useState(false)
-  const [loginTime, setLoginTime] = useState<number | null>(null)
-
-  // Strict 5-minute timeout logic
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout
-    if (isLoggedIn && loginTime) {
-      const timeElapsed = Date.now() - loginTime
-      const timeLeft = 5 * 60 * 1000 - timeElapsed // 5 minutes in ms
-      
-      if (timeLeft <= 0) {
-        logout()
-      } else {
-        timeoutId = setTimeout(() => {
-          logout()
-        }, timeLeft)
-      }
-    }
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId)
-    }
-  }, [isLoggedIn, loginTime])
 
   const login = (username: string) => {
     setIsLoggedIn(true)
     setUser(username)
-    setLoginTime(Date.now())
     setShowLoginModal(false)
   }
 
   const logout = () => {
     setIsLoggedIn(false)
     setUser(null)
-    setLoginTime(null)
   }
 
   return (

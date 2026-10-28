@@ -162,8 +162,8 @@ const Records: React.FC<RecordsProps> = ({ onEditRecord }) => {
   }
 
   return (
-    <div className="bg-gray-100 p-6 flex flex-col items-center min-h-full">
-      <div className="w-full max-w-7xl bg-white rounded-xl shadow-lg flex flex-col overflow-hidden p-8 space-y-8">
+    <div className="bg-gray-100 p-2 sm:p-4 flex flex-col items-center min-h-full">
+      <div className="w-full max-w-[98%] 2xl:max-w-[1800px] bg-white rounded-xl shadow-lg flex flex-col overflow-hidden p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Summary Section */}
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-bold text-gray-800">Records Dashboard</h2>
@@ -439,6 +439,7 @@ const Records: React.FC<RecordsProps> = ({ onEditRecord }) => {
                 )}
               </tbody>
             </table>
+            {/* Footer info */}
           </div>
         </section>
       </div>

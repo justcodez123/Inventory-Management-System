@@ -311,13 +311,13 @@ export const DigitalReceiptQR: React.FC<DigitalReceiptQRProps> = ({
         >
           📄 Download PDF
         </button>
-        <button
+        {/* <button
           type="button"
           className={mode === 'upi' ? 'active' : ''}
           onClick={() => handleModeChange('upi')}
         >
           ⚡ UPI Pay
-        </button>
+        </button> */}
       </div>
 
       {/* Dynamic QR Box */}
@@ -347,7 +347,8 @@ export const DigitalReceiptQR: React.FC<DigitalReceiptQRProps> = ({
           </div>
         )}
 
-        {mode === 'upi' && (
+        {/* UPI PAYMENT LOGIC */}
+        {/* {mode === 'upi' && (
           <div className="upi-amount-badge">
             <span className="upi-amount-label">Amount:</span>
             <span className="upi-amount-value">₹{totalAmount.toFixed(2)}</span>
@@ -361,7 +362,7 @@ export const DigitalReceiptQR: React.FC<DigitalReceiptQRProps> = ({
               ? 'Scan with camera — opens and downloads PDF directly on client phone'
               : 'Scan with phone camera or UPI app (GPay / PhonePe / Paytm) to pay'}
           </span>
-        </div>
+        </div> */}
 
         {/* Action Buttons for Cashier */}
         {mode === 'bill' && (

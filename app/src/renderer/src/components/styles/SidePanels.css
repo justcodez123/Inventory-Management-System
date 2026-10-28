@@ -2,10 +2,10 @@
 
 .dashboard-layout {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 250px;
-  gap: 1.25rem;
-  width: 100%;
-  max-width: 1720px;
+  grid-template-columns: 210px minmax(0, 1fr) 235px;
+  gap: 1rem;
+  width: 99%;
+  max-width: 1920px;
   margin: 0 auto;
   align-items: start;
   box-sizing: border-box;
@@ -13,8 +13,8 @@
 
 @media (max-width: 1280px) {
   .dashboard-layout {
-    grid-template-columns: 200px minmax(0, 1fr) 230px;
-    gap: 1rem;
+    grid-template-columns: 190px minmax(0, 1fr) 215px;
+    gap: 0.85rem;
   }
 }
 

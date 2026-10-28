@@ -2,8 +2,8 @@ import { useState } from 'react'
 import ConsumerBilling from './pages/ConsumerDashboard'
 import Records from './pages/Records'
 import Vendors from './pages/Vendors'
-import BarcodeInventory from './pages/BarcodeInventory'
 import { Navbar, NavOption } from './components/Navbar'
+import { ArrivalAlertBanner } from './components/ArrivalAlertBanner'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { SubscriptionProvider, useSubscription } from './context/SubscriptionContext'
 import LoginModal from './components/LoginModal'
@@ -13,7 +13,7 @@ import SubscriptionLockoutModal from './components/SubscriptionLockoutModal'
 function AppContent(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<NavOption>('Billing')
   const [editingRecord, setEditingRecord] = useState<any | null>(null)
-  const { showLoginModal, setShowLoginModal, login } = useAuth()
+  const { isLoggedIn, showLoginModal, setShowLoginModal, login } = useAuth()
   const { license, isLoading } = useSubscription()
 
   const handleEditRecord = (record: any) => {
@@ -24,6 +24,16 @@ function AppContent(): React.JSX.Element {
   return (
     <div className="flex flex-col h-screen overflow-hidden relative">
       <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {/* Continuous Upcoming Stock Arrival Alert Banner (5 days down to Today) */}
+      <ArrivalAlertBanner
+        onNavigateToVendors={() => {
+          setActiveTab('Vendors')
+          if (!isLoggedIn) {
+            setShowLoginModal(true)
+          }
+        }}
+      />
 
       {/* Subscription Expiry Warning Banner (within 5 days) */}
       {!isLoading &&
@@ -47,9 +57,6 @@ function AppContent(): React.JSX.Element {
         )}
         {activeTab === 'Records' && <Records onEditRecord={handleEditRecord} />}
         {activeTab === 'Vendors' && <Vendors />}
-        {activeTab === 'Barcode Inventory' && (
-          <BarcodeInventory onBackToBilling={() => setActiveTab('Billing')} />
-        )}
       </div>
 
       <LoginModal
@@ -63,6 +70,13 @@ function AppContent(): React.JSX.Element {
 
       {/* Hard Lockout Modal on Day 30 Expiry or Pending Status */}
       {!isLoading && license?.isRegistered && license?.isLocked && <SubscriptionLockoutModal />}
+
+      {/* Footer info */}
+      <footer className="px-8 py-4 bg-gray-50 border-t border-gray-100 text-center">
+          <p className="text-xs text-gray-400">
+            © 2026 Inventory Management System - Offline Edition
+          </p>
+      </footer>
     </div>
   )
 }

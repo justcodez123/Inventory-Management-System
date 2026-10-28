@@ -86,7 +86,38 @@ export function parseItemsSummary(summary: string, totalAmount?: number): EntryR
   return rows
 }
 
+const HEADER_QUOTES = [
+  '“Aura expires. The Trend doesn’t.”',
+  '“Style is a way to say who you are without having to speak.”',
+  '“Quality is remembered long after the price is forgotten.”',
+  '“Dress like you’re already famous.”',
+  '“Fashion fades, only style remains the same.”',
+  '“Elegance is not standing out, but being remembered is.”',
+  '“Buy More, choose well, make it last.”',
+  '“Fashion with Confidence is the best outfit. Rock it and own it.”',
+  '“Every day is a fashion show and the world is your runway.”',
+  '“Fashion is the ultimate sophistication.”'
+]
+
 const ConsumerBilling: React.FC<ConsumerBillingProps> = ({ initialRecord, onClearInitialRecord }) => {
+  // Rotating Header Quote State (changes every 5 seconds randomly)
+  const [quoteIndex, setQuoteIndex] = useState<number>(() =>
+    Math.floor(Math.random() * HEADER_QUOTES.length)
+  )
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setQuoteIndex((prev) => {
+        let next = Math.floor(Math.random() * HEADER_QUOTES.length)
+        if (next === prev) {
+          next = (prev + 1) % HEADER_QUOTES.length
+        }
+        return next
+      })
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [])
+
   // State for Customer Details
   const [customer, setCustomer] = useState<CustomerDetails>({
     name: '',
@@ -399,7 +430,7 @@ const ConsumerBilling: React.FC<ConsumerBillingProps> = ({ initialRecord, onClea
   }
 
   return (
-    <div className="bg-gray-100 p-2 sm:p-4 md:p-6 flex flex-col items-center">
+    <div className="bg-gray-100 p-2 sm:p-3 flex flex-col items-center w-full">
       <div className="dashboard-layout">
         {/* Left Side: Quick-Add Tiles */}
         <QuickAddPanel
@@ -413,14 +444,14 @@ const ConsumerBilling: React.FC<ConsumerBillingProps> = ({ initialRecord, onClea
         {/* Center: Main Dashboard Container */}
         <div className="w-full glass-card rounded-xl flex flex-col overflow-hidden">
           {/* Header Quote Section */}
-          <header className="px-3 py-3 sm:px-8 sm:py-6 border-b border-gray-100 flex justify-center items-center bg-white">
-            <blockquote className="header-quote">
-              “Trends expire. The aura doesn&apos;t.”
+          <header className="px-3 py-3 sm:px-8 sm:py-5 border-b border-gray-100 flex justify-center items-center bg-white">
+            <blockquote className="header-quote transition-opacity duration-300">
+              {HEADER_QUOTES[quoteIndex]}
             </blockquote>
           </header>
 
           {/* Content Area */}
-          <main className="p-3 sm:p-6 md:p-8 space-y-4 sm:space-y-6 md:space-y-8">
+          <main className="p-3 sm:p-5 lg:p-6 space-y-4 sm:space-y-6">
             {/* Editing Notice Banner */}
             {editingId && (
               <div className="flex items-center justify-between p-3.5 bg-indigo-50 border border-indigo-200 rounded-xl text-xs sm:text-sm font-semibold text-indigo-700 shadow-sm">
@@ -536,13 +567,6 @@ const ConsumerBilling: React.FC<ConsumerBillingProps> = ({ initialRecord, onClea
               </div>
             </div>
           </main>
-
-          {/* Footer info */}
-          <footer className="px-8 py-4 bg-gray-50 border-t border-gray-100 text-center">
-            <p className="text-xs text-gray-400">
-              © 2026 Inventory Management System - Offline Edition
-            </p>
-          </footer>
         </div>
 
         {/* Right Side: Top Sellers Mini Bar Chart */}
