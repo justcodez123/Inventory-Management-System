@@ -96,13 +96,17 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
 
         {/* Right: Manual Sync Trigger, Theme Toggle & Auth */}
         <div className="flex items-center gap-3">
-          {/* Manual Sync Trigger */}
+          {/* Manual Sync & Update Check Trigger */}
           <button
             type="button"
-            onClick={() => syncWithServer()}
+            onClick={() => {
+              syncWithServer()
+              // @ts-ignore
+              window.electron?.ipcRenderer?.invoke('check-for-updates')
+            }}
             disabled={isSyncing}
             className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            title="Sync with Remote Master Server"
+            title="Sync with Remote Master Server & Check for App Updates"
           >
             <span className={isSyncing ? 'animate-spin' : ''}>↻</span>
             <span>{isSyncing ? 'Refreshing...' : 'Refresh'}</span>

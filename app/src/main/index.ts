@@ -320,6 +320,40 @@ const allAsync = (sql: string, params: any[] = []) => new Promise<any[]>((resolv
 // }
 
 let mainWindow: BrowserWindow | null = null
+let isCheckingForUpdate = false
+let isDownloadingUpdate = false
+let isUpdateDownloaded = false
+let lastUpdateCheckAt = 0
+
+function triggerAutoUpdateCheck(forceManual = false): void {
+  if (is.dev) return
+
+  // If update was already downloaded, immediately force restart & install
+  if (isUpdateDownloaded) {
+    console.log('[AutoUpdater] Update already downloaded. Forcing restart and install...')
+    autoUpdater.quitAndInstall(false, true)
+    return
+  }
+
+  // Never interrupt an active update check or an active background download
+  if (isCheckingForUpdate || isDownloadingUpdate) {
+    console.log('[AutoUpdater] Update check or download already in progress, skipping duplicate check.')
+    return
+  }
+
+  const now = Date.now()
+  // For automatic background syncs, check at most once every 2 minutes to avoid GitHub API rate limits
+  if (!forceManual && now - lastUpdateCheckAt < 2 * 60 * 1000) {
+    return
+  }
+
+  lastUpdateCheckAt = now
+  isCheckingForUpdate = true
+  autoUpdater.checkForUpdates().catch((err) => {
+    isCheckingForUpdate = false
+    console.error('[AutoUpdater] Update check failed:', err)
+  })
+}
 
 function setupAutoUpdater(): void {
   autoUpdater.autoDownload = true
@@ -327,22 +361,32 @@ function setupAutoUpdater(): void {
   autoUpdater.logger = console
 
   autoUpdater.on('checking-for-update', () => {
+    isCheckingForUpdate = true
     console.log('[AutoUpdater] Checking for updates...')
   })
 
   autoUpdater.on('update-available', (info) => {
+    isCheckingForUpdate = false
+    isDownloadingUpdate = true
     console.log(`[AutoUpdater] Update available (v${info.version}). Downloading silently in the background...`)
   })
 
   autoUpdater.on('update-not-available', () => {
+    isCheckingForUpdate = false
+    isDownloadingUpdate = false
     console.log('[AutoUpdater] App is up to date.')
   })
 
   autoUpdater.on('error', (error) => {
+    isCheckingForUpdate = false
+    isDownloadingUpdate = false
     console.error('[AutoUpdater] Error encountered:', error)
   })
 
   autoUpdater.on('update-downloaded', (info) => {
+    isCheckingForUpdate = false
+    isDownloadingUpdate = false
+    isUpdateDownloaded = true
     console.log(`[AutoUpdater] Update downloaded (v${info.version}). Forcing restart to install...`)
 
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -459,7 +503,13 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('sync-subscription-status', async () => {
+    triggerAutoUpdateCheck(false)
     return await syncSubscriptionWithN8N(db)
+  })
+
+  ipcMain.handle('check-for-updates', async () => {
+    triggerAutoUpdateCheck(true)
+    return { success: true }
   })
 
   ipcMain.handle('get-machine-id', async () => {
@@ -949,15 +999,11 @@ ipcMain.handle('update-user-password', async (_event, { username, newPassword })
 
   // In production, trigger check for updates on startup and check periodically
   if (!is.dev) {
-    autoUpdater.checkForUpdates().catch((err) => {
-      console.error('[AutoUpdater] Initial update check failed:', err)
-    })
+    triggerAutoUpdateCheck(true)
 
     setInterval(() => {
-      autoUpdater.checkForUpdates().catch((err) => {
-        console.error('[AutoUpdater] Periodic update check failed:', err)
-      })
-    }, 60 * 60 * 1000)
+      triggerAutoUpdateCheck(false)
+    }, 5 * 60 * 1000)
   }
 
   app.on('activate', function () {
